@@ -33,6 +33,18 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O DermIA usa a câmera para fotografar a evolução das lesões."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O DermIA usa a galeria para anexar fotos de lesões já existentes."
+        }
       ]
     ],
     "experiments": {

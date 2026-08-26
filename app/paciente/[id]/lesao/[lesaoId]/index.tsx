@@ -1,9 +1,18 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvolucao';
+import { obterUrlAssinada } from '@/.lib/foto';
 import { supabase } from '@/.lib/supabase';
+
+type Analise = {
+  id: string;
+  foto_path: string;
+  status: string;
+  criado_em: string;
+  urlAssinada?: string | null;
+};
 
 type Adm = {
   articulacao: string;
@@ -24,16 +33,38 @@ type Registro = {
 export default function EvolucaoLesao() {
   const { id, lesaoId } = useLocalSearchParams<{ id: string; lesaoId: string }>();
   const [registros, setRegistros] = useState<Registro[]>([]);
+  const [analises, setAnalises] = useState<Analise[]>([]);
   const [filtro, setFiltro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
 
   const carregar = useCallback(async () => {
-    const { data } = await supabase
-      .from('registros_evolucao')
-      .select('id, adm, descricao, dor_eva, data_atendimento')
-      .eq('lesao_id', lesaoId)
-      .order('data_atendimento', { ascending: true });
-    setRegistros((data as Registro[]) ?? []);
+    const [{ data: r }, { data: a }] = await Promise.all([
+      supabase
+        .from('registros_evolucao')
+        .select('id, adm, descricao, dor_eva, data_atendimento')
+        .eq('lesao_id', lesaoId)
+        .order('data_atendimento', { ascending: true }),
+      supabase
+        .from('analises_ia')
+        .select('id, foto_path, status, criado_em')
+        .eq('lesao_id', lesaoId)
+        .order('criado_em', { ascending: false }),
+    ]);
+    setRegistros((r as Registro[]) ?? []);
+
+    const listaAnalises = (a as Analise[]) ?? [];
+    setAnalises(listaAnalises);
+    Promise.all(
+      listaAnalises.map(async (item) => ({ id: item.id, url: await obterUrlAssinada(item.foto_path) }))
+    ).then((resultados) => {
+      setAnalises((atual) =>
+        atual.map((item) => ({
+          ...item,
+          urlAssinada: resultados.find((res) => res.id === item.id)?.url,
+        }))
+      );
+    });
+
     setCarregando(false);
   }, [lesaoId]);
 
@@ -77,6 +108,29 @@ export default function EvolucaoLesao() {
   return (
     <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
       <Text className="text-texto text-lg font-bold mb-3">Evolução da lesão</Text>
+
+      <Text className="text-texto font-semibold mb-2">Fotos</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+        <Link href={`/paciente/${id}/lesao/${lesaoId}/foto/nova`} asChild>
+          <Pressable className="w-24 h-24 mr-3 rounded-xl border border-dashed border-borda items-center justify-center bg-superficie">
+            <Text className="text-primaria text-xs font-semibold text-center">+ Nova{'\n'}foto</Text>
+          </Pressable>
+        </Link>
+        {analises.map((a) => (
+          <Pressable
+            key={a.id}
+            onPress={() => router.push(`/paciente/${id}/lesao/${lesaoId}/foto/${a.id}`)}
+            className="w-24 h-24 mr-3 rounded-xl overflow-hidden bg-superficie border border-borda">
+            {a.urlAssinada ? (
+              <Image source={{ uri: a.urlAssinada }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator color="#0E5FD8" size="small" />
+              </View>
+            )}
+          </Pressable>
+        ))}
+      </ScrollView>
 
       {combinacoes.length > 0 && (
         <View className="flex-row flex-wrap gap-2 mb-3">

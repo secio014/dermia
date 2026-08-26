@@ -4,7 +4,7 @@ export default function TelaCamera() {
   return (
     <TelaPlaceholder
       titulo="Câmera"
-      descricao="Captura de foto com moldura de enquadramento chega na Etapa 3."
+      descricao="A câmera agora fica dentro de cada lesão (aba Início → paciente → lesão → Nova foto)."
     />
   );
 }
