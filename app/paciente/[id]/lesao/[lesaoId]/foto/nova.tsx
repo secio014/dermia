@@ -46,7 +46,13 @@ export default function NovaFoto() {
       router.replace(`/paciente/${id}/lesao/${lesaoId}/foto/${analise.id}`);
     } catch (e) {
       setEnviando(false);
-      setErro(e instanceof Error ? e.message : 'Erro ao enviar a foto.');
+      const mensagem =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e !== null && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : 'Erro ao enviar a foto.';
+      setErro(mensagem);
     }
   }
 

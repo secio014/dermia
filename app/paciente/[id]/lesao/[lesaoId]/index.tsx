@@ -3,8 +3,10 @@ import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvolucao';
+import GraficoVancouver, { type PontoVancouver } from '@/components/GraficoVancouver';
 import { obterUrlAssinada } from '@/.lib/foto';
 import { supabase } from '@/.lib/supabase';
+import { totalVancouver, type EscalaCicatriz } from '@/.lib/vancouver';
 
 type Analise = {
   id: string;
@@ -27,6 +29,7 @@ type Registro = {
   adm: Adm[];
   descricao: string | null;
   dor_eva: number | null;
+  escala_cicatriz: EscalaCicatriz | null;
   data_atendimento: string;
 };
 
@@ -41,7 +44,7 @@ export default function EvolucaoLesao() {
     const [{ data: r }, { data: a }] = await Promise.all([
       supabase
         .from('registros_evolucao')
-        .select('id, adm, descricao, dor_eva, data_atendimento')
+        .select('id, adm, descricao, dor_eva, escala_cicatriz, data_atendimento')
         .eq('lesao_id', lesaoId)
         .order('data_atendimento', { ascending: true }),
       supabase
@@ -97,6 +100,14 @@ export default function EvolucaoLesao() {
       .filter((p): p is PontoEvolucao => p !== null);
   }, [registros, chaveAtiva]);
 
+  const pontosVancouver: PontoVancouver[] = useMemo(
+    () =>
+      registros
+        .filter((r) => r.escala_cicatriz !== null)
+        .map((r) => ({ data: r.data_atendimento, total: totalVancouver(r.escala_cicatriz!) })),
+    [registros]
+  );
+
   if (carregando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
@@ -131,6 +142,19 @@ export default function EvolucaoLesao() {
           </Pressable>
         ))}
       </ScrollView>
+
+      {analises.length >= 2 && (
+        <Link href={`/paciente/${id}/lesao/${lesaoId}/comparar`} asChild>
+          <Pressable className="bg-superficie border border-primaria rounded-xl py-2.5 items-center mb-4">
+            <Text className="text-primaria font-semibold text-xs">Comparar fotos ao longo do tempo</Text>
+          </Pressable>
+        </Link>
+      )}
+
+      <Text className="text-texto font-semibold mb-2">Cicatriz (Vancouver)</Text>
+      <View className="mb-4">
+        <GraficoVancouver pontos={pontosVancouver} />
+      </View>
 
       {combinacoes.length > 0 && (
         <View className="flex-row flex-wrap gap-2 mb-3">

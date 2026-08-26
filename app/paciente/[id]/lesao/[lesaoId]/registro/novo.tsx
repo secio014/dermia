@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
+import { CAMPOS_VANCOUVER, type EscalaCicatriz } from '@/.lib/vancouver';
 
 type Medida = {
   articulacao: string;
@@ -23,8 +24,16 @@ export default function NovoRegistro() {
   const [referencia, setReferencia] = useState('');
   const [descricao, setDescricao] = useState('');
   const [dorEva, setDorEva] = useState('');
+  const [vancouver, setVancouver] = useState<Record<keyof EscalaCicatriz, string>>({
+    pigmentacao: '',
+    vascularidade: '',
+    elasticidade: '',
+    altura: '',
+  });
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const vancouverPreenchido = Object.values(vancouver).some((v) => v !== '');
 
   function adicionarMedida() {
     if (!articulacao.trim() || !movimento.trim() || !grauAtivo || !grauPassivo) {
@@ -68,12 +77,22 @@ export default function NovoRegistro() {
       return;
     }
 
+    const escalaCicatriz: EscalaCicatriz | null = vancouverPreenchido
+      ? {
+          pigmentacao: Number(vancouver.pigmentacao) || 0,
+          vascularidade: Number(vancouver.vascularidade) || 0,
+          elasticidade: Number(vancouver.elasticidade) || 0,
+          altura: Number(vancouver.altura) || 0,
+        }
+      : null;
+
     const { error } = await supabase.from('registros_evolucao').insert({
       lesao_id: lesaoId,
       profissional_id: perfil.id,
       adm: medidas,
       descricao: descricao.trim() || null,
       dor_eva: dorEva ? Number(dorEva) : null,
+      escala_cicatriz: escalaCicatriz,
     });
 
     setCarregando(false);
@@ -161,6 +180,25 @@ export default function NovoRegistro() {
         keyboardType="numeric"
         className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
       />
+
+      <Text className="text-texto font-semibold mb-2">Escala de Vancouver (opcional)</Text>
+      <View className="flex-row flex-wrap gap-3 mb-3">
+        {CAMPOS_VANCOUVER.map((c) => (
+          <View key={c.campo} style={{ width: '47%' }}>
+            <Text className="text-secundario text-xs mb-1">
+              {c.rotulo} (0-{c.max})
+            </Text>
+            <TextInput
+              value={vancouver[c.campo]}
+              onChangeText={(v) => setVancouver((atual) => ({ ...atual, [c.campo]: v }))}
+              placeholder="0"
+              placeholderTextColor="#5B6B7F"
+              keyboardType="numeric"
+              className="bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
+            />
+          </View>
+        ))}
+      </View>
 
       <TextInput
         value={descricao}

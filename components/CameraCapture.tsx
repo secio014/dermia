@@ -55,8 +55,19 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
 
   return (
     <View className="flex-1 bg-fundo">
-      <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back">
-        <View className="flex-1 items-center justify-center">
+      <View style={{ flex: 1 }}>
+        <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
           <View
             style={{
               width: '75%',
@@ -68,7 +79,7 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
             }}
           />
         </View>
-      </CameraView>
+      </View>
       <View className="p-4 items-center bg-fundo">
         <Pressable
           onPress={capturar}

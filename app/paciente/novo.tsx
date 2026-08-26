@@ -16,6 +16,7 @@ function gerarCodigo(): string {
 export default function NovoPaciente() {
   const [nome, setNome] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
+  const [consentiu, setConsentiu] = useState(false);
   const [codigo] = useState(gerarCodigo());
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -23,6 +24,10 @@ export default function NovoPaciente() {
   async function salvar() {
     if (!nome.trim()) {
       setErro('Informe o nome do paciente.');
+      return;
+    }
+    if (!consentiu) {
+      setErro('É necessário registrar o consentimento do paciente para captura de imagens.');
       return;
     }
     setErro(null);
@@ -43,6 +48,8 @@ export default function NovoPaciente() {
         codigo_pseudonimo: codigo,
         nome_completo: nome.trim(),
         data_nascimento: dataNascimento || null,
+        consentimento_em: new Date().toISOString(),
+        consentimento_versao: '1.0',
       })
       .select('id')
       .single();
@@ -76,6 +83,26 @@ export default function NovoPaciente() {
         placeholderTextColor="#5B6B7F"
         className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
       />
+
+      <Pressable
+        onPress={() => setConsentiu((atual) => !atual)}
+        className="flex-row items-start gap-3 bg-superficie border border-borda rounded-xl px-4 py-3 mb-3">
+        <View
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 4,
+            borderWidth: 2,
+            borderColor: consentiu ? undefined : '#5B6B7F',
+          }}
+          className={consentiu ? 'bg-primaria border-primaria items-center justify-center' : 'items-center justify-center'}>
+          {consentiu && <Text className="text-superficie text-xs font-bold">✓</Text>}
+        </View>
+        <Text className="text-secundario text-xs flex-1">
+          O paciente (ou responsável) consentiu com a captura e o armazenamento de fotos da lesão
+          para fins de acompanhamento clínico.
+        </Text>
+      </Pressable>
 
       {erro && <Text className="text-risco mb-3">{erro}</Text>}
 
