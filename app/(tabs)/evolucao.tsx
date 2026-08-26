@@ -4,7 +4,7 @@ export default function TelaEvolucao() {
   return (
     <TelaPlaceholder
       titulo="Evolução"
-      descricao="Registros de evolução, goniometria e gráficos chegam na Etapa 2."
+      descricao="Abra um paciente na aba Início e depois uma lesão para ver o histórico de goniometria e o gráfico de evolução."
     />
   );
 }

@@ -1,0 +1,86 @@
+import { useState } from 'react';
+import { router } from 'expo-router';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+
+import { supabase } from '@/.lib/supabase';
+
+function gerarCodigo(): string {
+  const agora = new Date();
+  const aleatorio = Math.floor(Math.random() * 900 + 100);
+  return `P${agora.getFullYear().toString().slice(2)}${(agora.getMonth() + 1)
+    .toString()
+    .padStart(2, '0')}-${aleatorio}`;
+}
+
+export default function NovoPaciente() {
+  const [nome, setNome] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [codigo] = useState(gerarCodigo());
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function salvar() {
+    if (!nome.trim()) {
+      setErro('Informe o nome do paciente.');
+      return;
+    }
+    setErro(null);
+    setCarregando(true);
+
+    const { data: usuario } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from('pacientes')
+      .insert({
+        profissional_id: usuario.user?.id,
+        codigo,
+        nome: nome.trim(),
+        data_nascimento: dataNascimento || null,
+      })
+      .select('id')
+      .single();
+
+    setCarregando(false);
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+    router.replace(`/paciente/${data.id}`);
+  }
+
+  return (
+    <View className="flex-1 bg-fundo px-6 pt-6">
+      <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
+      <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
+
+      <TextInput
+        value={nome}
+        onChangeText={setNome}
+        placeholder="Nome completo"
+        placeholderTextColor="#5B6B7F"
+        autoCapitalize="words"
+        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
+      />
+
+      <TextInput
+        value={dataNascimento}
+        onChangeText={setDataNascimento}
+        placeholder="Data de nascimento (AAAA-MM-DD)"
+        placeholderTextColor="#5B6B7F"
+        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
+      />
+
+      {erro && <Text className="text-risco mb-3">{erro}</Text>}
+
+      <Pressable
+        onPress={salvar}
+        disabled={carregando}
+        className="bg-primaria rounded-xl py-3 items-center mt-3">
+        {carregando ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text className="text-superficie font-semibold">Salvar paciente</Text>
+        )}
+      </Pressable>
+    </View>
+  );
+}

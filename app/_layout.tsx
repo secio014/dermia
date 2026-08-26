@@ -20,6 +20,9 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
+// TODO: reativar quando o novo fluxo de login/cadastro estiver pronto.
+const LOGIN_DESATIVADO = true;
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -58,7 +61,7 @@ function RootLayoutNav() {
     );
   }
 
-  if (!sessao) {
+  if (!LOGIN_DESATIVADO && !sessao) {
     return <Auth />;
   }
 

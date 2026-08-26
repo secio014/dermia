@@ -4,21 +4,16 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { supabase } from '@/.lib/supabase';
 
 export default function Auth() {
-  const [modo, setModo] = useState<'login' | 'cadastro'>('login');
-  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  async function enviar() {
+  async function entrar() {
     setErro(null);
     setCarregando(true);
 
-    const { error } =
-      modo === 'login'
-        ? await supabase.auth.signInWithPassword({ email, password: senha })
-        : await supabase.auth.signUp({ email, password: senha, options: { data: { nome } } });
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
 
     setCarregando(false);
     if (error) setErro(error.message);
@@ -27,20 +22,7 @@ export default function Auth() {
   return (
     <View className="flex-1 bg-fundo justify-center px-6">
       <Text className="text-texto text-2xl font-bold mb-1">DermIA</Text>
-      <Text className="text-secundario mb-8">
-        {modo === 'login' ? 'Entre com sua conta' : 'Crie sua conta de profissional'}
-      </Text>
-
-      {modo === 'cadastro' && (
-        <TextInput
-          value={nome}
-          onChangeText={setNome}
-          placeholder="Nome completo"
-          placeholderTextColor="#5B6B7F"
-          autoCapitalize="words"
-          className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
-        />
-      )}
+      <Text className="text-secundario mb-8">Entre com sua conta</Text>
 
       <TextInput
         value={email}
@@ -64,22 +46,14 @@ export default function Auth() {
       {erro && <Text className="text-risco mb-3">{erro}</Text>}
 
       <Pressable
-        onPress={enviar}
+        onPress={entrar}
         disabled={carregando}
         className="bg-primaria rounded-xl py-3 items-center mb-4">
         {carregando ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text className="text-superficie font-semibold">
-            {modo === 'login' ? 'Entrar' : 'Cadastrar'}
-          </Text>
+          <Text className="text-superficie font-semibold">Entrar</Text>
         )}
-      </Pressable>
-
-      <Pressable onPress={() => setModo(modo === 'login' ? 'cadastro' : 'login')}>
-        <Text className="text-primaria text-center">
-          {modo === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entrar'}
-        </Text>
       </Pressable>
     </View>
   );
