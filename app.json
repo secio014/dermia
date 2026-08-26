@@ -45,7 +45,8 @@
         {
           "photosPermission": "O DermIA usa a galeria para anexar fotos de lesões já existentes."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true
