@@ -1,19 +1,31 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+// Paleta oficial do design system DermIA (ver tailwind.config.js)
+const palette = {
+  fundo: '#F7F9FB',
+  superficie: '#FFFFFF',
+  texto: '#0F1B2D',
+  secundario: '#5B6B7F',
+  borda: '#DCE3EC',
+  primaria: '#0E5FD8',
+  ok: '#0F9D6C',
+  atencao: '#D97706',
+  risco: '#C81E3A',
+};
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
+    text: palette.texto,
+    background: palette.fundo,
+    tint: palette.primaria,
+    tabIconDefault: palette.secundario,
+    tabIconSelected: palette.primaria,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
+    text: palette.superficie,
+    background: palette.texto,
+    tint: palette.primaria,
+    tabIconDefault: palette.secundario,
+    tabIconSelected: palette.primaria,
   },
 };
+
+export { palette };
