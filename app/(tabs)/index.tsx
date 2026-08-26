@@ -6,24 +6,16 @@ import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native
 import PacienteCard, { type PainelPaciente } from '@/components/PacienteCard';
 import { supabase } from '@/.lib/supabase';
 
-function pontuacaoPrioridade(p: PainelPaciente): number {
-  if (!p.lesao_id) return -1;
-  const scq = p.scq_percentual ?? 0;
-  const dias = p.dias_desde_lesao ?? 999;
-  return scq * 2 - dias;
-}
-
 export default function TelaInicio() {
   const [pacientes, setPacientes] = useState<PainelPaciente[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const carregar = useCallback(async () => {
-    const { data } = await supabase.from('vw_painel_pacientes').select('*');
-
-    const ordenados = [...((data as PainelPaciente[] | null) ?? [])].sort(
-      (a, b) => pontuacaoPrioridade(b) - pontuacaoPrioridade(a)
-    );
-    setPacientes(ordenados);
+    const { data } = await supabase
+      .from('vw_painel_pacientes')
+      .select('*')
+      .order('prioridade', { ascending: true });
+    setPacientes((data as PainelPaciente[] | null) ?? []);
     setCarregando(false);
   }, []);
 
@@ -42,7 +34,7 @@ export default function TelaInicio() {
       ) : pacientes.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Text className="text-texto text-lg font-semibold mb-2 text-center">
-            Nenhum paciente ainda
+            Nenhum paciente com lesão ativa
           </Text>
           <Text className="text-secundario text-center">
             Toque em "Novo paciente" para cadastrar o primeiro.

@@ -2,16 +2,23 @@ import { useCallback, useState } from 'react';
 import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 
+import { GRAUS_CLINICOS } from '@/.lib/scq';
 import { supabase } from '@/.lib/supabase';
 
-type Paciente = { id: string; nome: string; codigo: string };
+type Paciente = { id: string; nome_completo: string; codigo_pseudonimo: string };
 type Lesao = {
   id: string;
-  scq_percentual: number;
-  pediatrico: boolean;
-  data_lesao: string;
-  regioes_marcadas: string[];
+  scq_percentual: number | null;
+  scq_tabela: string | null;
+  grau_clinico: string | null;
+  status: string;
+  data_ocorrencia: string | null;
+  regiao_corporal: string;
 };
+
+function rotuloGrau(grau: string | null): string {
+  return GRAUS_CLINICOS.find((g) => g.id === grau)?.rotulo ?? 'Grau não informado';
+}
 
 export default function DetalhePaciente() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,12 +28,12 @@ export default function DetalhePaciente() {
 
   const carregar = useCallback(async () => {
     const [{ data: p }, { data: l }] = await Promise.all([
-      supabase.from('pacientes').select('id, nome, codigo').eq('id', id).single(),
+      supabase.from('pacientes').select('id, nome_completo, codigo_pseudonimo').eq('id', id).single(),
       supabase
         .from('lesoes')
-        .select('id, scq_percentual, pediatrico, data_lesao, regioes_marcadas')
+        .select('id, scq_percentual, scq_tabela, grau_clinico, status, data_ocorrencia, regiao_corporal')
         .eq('paciente_id', id)
-        .order('data_lesao', { ascending: false }),
+        .order('data_ocorrencia', { ascending: false }),
     ]);
     setPaciente(p);
     setLesoes(l ?? []);
@@ -49,8 +56,8 @@ export default function DetalhePaciente() {
 
   return (
     <View className="flex-1 bg-fundo px-4 pt-4">
-      <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome}</Text>
-      <Text className="text-secundario mb-6">{paciente?.codigo}</Text>
+      <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome_completo}</Text>
+      <Text className="text-secundario mb-6">{paciente?.codigo_pseudonimo}</Text>
 
       <Text className="text-texto font-semibold mb-2">Lesões</Text>
 
@@ -67,15 +74,16 @@ export default function DetalhePaciente() {
               className="bg-superficie border border-borda rounded-xl p-4 mb-3">
               <View className="flex-row justify-between mb-1">
                 <Text className="text-texto font-semibold">
-                  {new Date(item.data_lesao).toLocaleDateString('pt-BR')}
+                  {item.data_ocorrencia
+                    ? new Date(item.data_ocorrencia).toLocaleDateString('pt-BR')
+                    : 'Data não informada'}
                 </Text>
                 <Text className="text-secundario text-xs">
-                  {item.pediatrico ? 'Pediátrico' : 'Adulto'}
+                  {item.scq_tabela === 'wallace_pediatrico' ? 'Pediátrico' : 'Adulto'}
                 </Text>
               </View>
               <Text className="text-secundario">
-                SCQ {item.scq_percentual}% · {item.regioes_marcadas.length}{' '}
-                {item.regioes_marcadas.length === 1 ? 'região' : 'regiões'}
+                {item.regiao_corporal} · SCQ {item.scq_percentual ?? 0}% · {rotuloGrau(item.grau_clinico)}
               </Text>
             </Pressable>
           )}

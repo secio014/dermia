@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 
 type Medida = {
@@ -20,7 +21,8 @@ export default function NovoRegistro() {
   const [grauAtivo, setGrauAtivo] = useState('');
   const [grauPassivo, setGrauPassivo] = useState('');
   const [referencia, setReferencia] = useState('');
-  const [observacoes, setObservacoes] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [dorEva, setDorEva] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -59,12 +61,19 @@ export default function NovoRegistro() {
     setErro(null);
     setCarregando(true);
 
-    const { data: usuario } = await supabase.auth.getUser();
+    const perfil = await obterPerfilProfissional();
+    if (!perfil) {
+      setCarregando(false);
+      setErro('Não foi possível identificar o profissional logado.');
+      return;
+    }
+
     const { error } = await supabase.from('registros_evolucao').insert({
       lesao_id: lesaoId,
-      goniometria: medidas,
-      observacoes: observacoes.trim() || null,
-      criado_por: usuario.user?.id,
+      profissional_id: perfil.id,
+      adm: medidas,
+      descricao: descricao.trim() || null,
+      dor_eva: dorEva ? Number(dorEva) : null,
     });
 
     setCarregando(false);
@@ -145,9 +154,18 @@ export default function NovoRegistro() {
       )}
 
       <TextInput
-        value={observacoes}
-        onChangeText={setObservacoes}
-        placeholder="Observações do registro (opcional)"
+        value={dorEva}
+        onChangeText={setDorEva}
+        placeholder="Dor (escala EVA 0-10, opcional)"
+        placeholderTextColor="#5B6B7F"
+        keyboardType="numeric"
+        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
+      />
+
+      <TextInput
+        value={descricao}
+        onChangeText={setDescricao}
+        placeholder="Descrição do atendimento (opcional)"
         placeholderTextColor="#5B6B7F"
         multiline
         className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto min-h-[80px]"

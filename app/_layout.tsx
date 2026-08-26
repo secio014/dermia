@@ -8,6 +8,7 @@ import '../global.css';
 
 import Auth from '@/components/Auth';
 import { useColorScheme } from '@/components/useColorScheme';
+import { LOGIN_DESATIVADO } from '@/.lib/dev';
 import { useSessao } from '@/.lib/useSessao';
 
 export {
@@ -19,9 +20,6 @@ export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
-
-// TODO: reativar quando o novo fluxo de login/cadastro estiver pronto.
-const LOGIN_DESATIVADO = true;
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

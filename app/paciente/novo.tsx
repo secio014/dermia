@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
+import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 
 function gerarCodigo(): string {
@@ -27,13 +28,20 @@ export default function NovoPaciente() {
     setErro(null);
     setCarregando(true);
 
-    const { data: usuario } = await supabase.auth.getUser();
+    const perfil = await obterPerfilProfissional();
+    if (!perfil) {
+      setCarregando(false);
+      setErro('Não foi possível identificar o profissional logado.');
+      return;
+    }
+
     const { data, error } = await supabase
       .from('pacientes')
       .insert({
-        profissional_id: usuario.user?.id,
-        codigo,
-        nome: nome.trim(),
+        clinica_id: perfil.clinica_id,
+        criado_por: perfil.id,
+        codigo_pseudonimo: codigo,
+        nome_completo: nome.trim(),
         data_nascimento: dataNascimento || null,
       })
       .select('id')

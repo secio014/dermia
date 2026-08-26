@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvolucao';
 import { supabase } from '@/.lib/supabase';
 
-type Goniometria = {
+type Adm = {
   articulacao: string;
   movimento: string;
   grau_ativo: number;
@@ -15,9 +15,10 @@ type Goniometria = {
 
 type Registro = {
   id: string;
-  goniometria: Goniometria[];
-  observacoes: string | null;
-  criado_em: string;
+  adm: Adm[];
+  descricao: string | null;
+  dor_eva: number | null;
+  data_atendimento: string;
 };
 
 export default function EvolucaoLesao() {
@@ -29,9 +30,9 @@ export default function EvolucaoLesao() {
   const carregar = useCallback(async () => {
     const { data } = await supabase
       .from('registros_evolucao')
-      .select('id, goniometria, observacoes, criado_em')
+      .select('id, adm, descricao, dor_eva, data_atendimento')
       .eq('lesao_id', lesaoId)
-      .order('criado_em', { ascending: true });
+      .order('data_atendimento', { ascending: true });
     setRegistros((data as Registro[]) ?? []);
     setCarregando(false);
   }, [lesaoId]);
@@ -44,7 +45,7 @@ export default function EvolucaoLesao() {
 
   const combinacoes = useMemo(() => {
     const chaves = new Set<string>();
-    registros.forEach((r) => r.goniometria.forEach((g) => chaves.add(`${g.articulacao} — ${g.movimento}`)));
+    registros.forEach((r) => r.adm.forEach((g) => chaves.add(`${g.articulacao} — ${g.movimento}`)));
     return Array.from(chaves);
   }, [registros]);
 
@@ -54,10 +55,10 @@ export default function EvolucaoLesao() {
     if (!chaveAtiva) return [];
     return registros
       .map((r) => {
-        const medida = r.goniometria.find((g) => `${g.articulacao} — ${g.movimento}` === chaveAtiva);
+        const medida = r.adm.find((g) => `${g.articulacao} — ${g.movimento}` === chaveAtiva);
         if (!medida) return null;
         return {
-          data: r.criado_em,
+          data: r.data_atendimento,
           grauAtivo: medida.grau_ativo,
           grauPassivo: medida.grau_passivo,
         };
@@ -102,16 +103,21 @@ export default function EvolucaoLesao() {
       ) : (
         [...registros].reverse().map((r) => (
           <View key={r.id} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
-            <Text className="text-texto font-semibold mb-1">
-              {new Date(r.criado_em).toLocaleDateString('pt-BR')}
-            </Text>
-            {r.goniometria.map((g, i) => (
+            <View className="flex-row justify-between mb-1">
+              <Text className="text-texto font-semibold">
+                {new Date(r.data_atendimento).toLocaleDateString('pt-BR')}
+              </Text>
+              {r.dor_eva != null && (
+                <Text className="text-secundario text-xs">Dor (EVA): {r.dor_eva}/10</Text>
+              )}
+            </View>
+            {r.adm.map((g, i) => (
               <Text key={i} className="text-secundario text-xs">
                 {g.articulacao} · {g.movimento}: ativo {g.grau_ativo}° / passivo {g.grau_passivo}°
                 {g.referencia ? ` (ref. ${g.referencia}°)` : ''}
               </Text>
             ))}
-            {r.observacoes && <Text className="text-secundario text-xs mt-1">{r.observacoes}</Text>}
+            {r.descricao && <Text className="text-secundario text-xs mt-1">{r.descricao}</Text>}
           </View>
         ))
       )}

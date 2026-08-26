@@ -4,7 +4,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { supabase } from '@/.lib/supabase';
 
 export default function TelaAdmin() {
-  const [cargo, setCargo] = useState<string | null>(null);
+  const [papel, setPapel] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
@@ -12,10 +12,10 @@ export default function TelaAdmin() {
       if (!data.user) return setCarregando(false);
       const { data: perfil } = await supabase
         .from('profissionais')
-        .select('cargo')
+        .select('papel')
         .eq('id', data.user.id)
         .single();
-      setCargo(perfil?.cargo ?? null);
+      setPapel(perfil?.papel ?? null);
       setCarregando(false);
     });
   }, []);
@@ -28,7 +28,7 @@ export default function TelaAdmin() {
     );
   }
 
-  if (cargo !== 'admin') {
+  if (papel !== 'admin') {
     return (
       <View className="flex-1 bg-fundo items-center justify-center px-8">
         <Text className="text-texto text-center">

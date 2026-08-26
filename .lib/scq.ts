@@ -56,3 +56,25 @@ export function calcularSCQ(regioesMarcadas: RegiaoId[], pediatrico: boolean): n
   const total = regioesMarcadas.reduce((soma, regiao) => soma + (tabela[regiao] ?? 0), 0);
   return Math.round(total * 100) / 100;
 }
+
+// Nome da tabela salvo em lesoes.scq_tabela no Supabase.
+export function scqTabela(pediatrico: boolean): string {
+  return pediatrico ? 'wallace_pediatrico' : 'wallace_adulto';
+}
+
+export function rotuloRegiaoCorporal(regioesMarcadas: RegiaoId[]): string {
+  if (regioesMarcadas.length === 0) return '';
+  if (regioesMarcadas.length === 1) {
+    return REGIOES.find((r) => r.id === regioesMarcadas[0])!.rotulo;
+  }
+  return 'Múltiplas regiões';
+}
+
+// Valores esperados por lesoes.grau_clinico — a view vw_painel_pacientes usa
+// exatamente essas strings para calcular a prioridade no painel de pacientes.
+export const GRAUS_CLINICOS: { id: string; rotulo: string }[] = [
+  { id: '1', rotulo: '1º grau' },
+  { id: '2_superficial', rotulo: '2º grau superficial' },
+  { id: '2_profundo', rotulo: '2º grau profundo' },
+  { id: '3', rotulo: '3º grau' },
+];
