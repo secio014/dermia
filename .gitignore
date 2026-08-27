@@ -41,6 +41,9 @@ yarn-error.*
 /ios
 /android
 
+# Supabase CLI local cache
+supabase/.temp/
+
 # editors
 .claude/
 .vscode/

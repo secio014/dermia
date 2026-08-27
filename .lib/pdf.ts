@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 
 import { GRAUS_CLINICOS } from '@/.lib/scq';
 
@@ -121,6 +122,21 @@ export function montarHtmlRelatorio({
 }
 
 export async function gerarECompartilharPDF(html: string) {
+  if (Platform.OS === 'web') {
+    // expo-print não gera arquivo no web (só chama window.print() sem usar o
+    // HTML) — abrimos a própria janela de impressão do navegador com o
+    // relatório, e o usuário salva como PDF por ali.
+    const janela = window.open('', '_blank');
+    if (!janela) {
+      throw new Error('O navegador bloqueou a janela de impressão. Permita pop-ups para este site.');
+    }
+    janela.document.write(html);
+    janela.document.close();
+    janela.focus();
+    janela.print();
+    return;
+  }
+
   const { uri } = await Print.printToFileAsync({ html });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
