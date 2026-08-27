@@ -67,6 +67,10 @@ export default function NovoRegistro() {
       setErro('Adicione ao menos uma medida de goniometria.');
       return;
     }
+    if (dorEva && (Number(dorEva) < 0 || Number(dorEva) > 10)) {
+      setErro('Dor (EVA) deve ser entre 0 e 10.');
+      return;
+    }
     setErro(null);
     setCarregando(true);
 

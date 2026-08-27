@@ -100,7 +100,9 @@ export default function ComparadorTemporal() {
   }
 
   const deltaConfianca =
-    antes?.confianca != null && depois?.confianca != null ? depois.confianca - antes.confianca : null;
+    antes?.confianca != null && depois?.confianca != null
+      ? (depois.confianca - antes.confianca) * 100
+      : null;
 
   return (
     <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>

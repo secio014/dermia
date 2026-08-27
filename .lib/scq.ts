@@ -57,9 +57,10 @@ export function calcularSCQ(regioesMarcadas: RegiaoId[], pediatrico: boolean): n
   return Math.round(total * 100) / 100;
 }
 
-// Nome da tabela salvo em lesoes.scq_tabela no Supabase.
+// Nome da tabela salvo em lesoes.scq_tabela no Supabase — os únicos valores
+// aceitos pela check constraint são exatamente estes dois.
 export function scqTabela(pediatrico: boolean): string {
-  return pediatrico ? 'wallace_pediatrico' : 'wallace_adulto';
+  return pediatrico ? 'lund_browder_pediatrico' : 'wallace_adulto';
 }
 
 export function rotuloRegiaoCorporal(regioesMarcadas: RegiaoId[]): string {
@@ -77,4 +78,24 @@ export const GRAUS_CLINICOS: { id: string; rotulo: string }[] = [
   { id: '2_superficial', rotulo: '2º grau superficial' },
   { id: '2_profundo', rotulo: '2º grau profundo' },
   { id: '3', rotulo: '3º grau' },
+  { id: 'misto', rotulo: 'Misto' },
+  { id: 'indeterminado', rotulo: 'Indeterminado' },
+];
+
+// Valores aceitos por lesoes.mecanismo.
+export const MECANISMOS: { id: string; rotulo: string }[] = [
+  { id: 'escaldadura', rotulo: 'Escaldadura' },
+  { id: 'chama', rotulo: 'Chama' },
+  { id: 'eletrica', rotulo: 'Elétrica' },
+  { id: 'quimica', rotulo: 'Química' },
+  { id: 'contato', rotulo: 'Contato' },
+  { id: 'radiacao', rotulo: 'Radiação' },
+  { id: 'outro', rotulo: 'Outro' },
+];
+
+// Valores aceitos por lesoes.status.
+export const STATUS_LESAO: { id: string; rotulo: string }[] = [
+  { id: 'ativa', rotulo: 'Ativa' },
+  { id: 'cicatrizada', rotulo: 'Cicatrizada' },
+  { id: 'alta', rotulo: 'Alta' },
 ];

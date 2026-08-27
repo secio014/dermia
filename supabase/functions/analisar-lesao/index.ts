@@ -11,9 +11,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 
+// analises_ia.confianca tem check constraint 0-1 (fração, não percentual).
 const ResultadoOllama = z.object({
   grau_sugerido: z.enum(['1', '2_superficial', '2_profundo', '3']),
-  confianca: z.number().min(0).max(100),
+  confianca: z.number().min(0).max(1),
   observacao: z.string().optional(),
 });
 
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
         prompt:
           'Você é um assistente clínico. Analise a foto de uma queimadura e responda ' +
           'APENAS com um JSON no formato {"grau_sugerido": "1"|"2_superficial"|"2_profundo"|"3", ' +
-          '"confianca": 0-100, "observacao": "texto curto opcional"}.',
+          '"confianca": número entre 0 e 1, "observacao": "texto curto opcional"}.',
         images: [base64],
         format: 'json',
         stream: false,

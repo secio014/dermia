@@ -106,9 +106,9 @@ export default function DetalheAnalise() {
         resultado={analise.resultado}
         confianca={analise.confianca}
         validacaoProfissional={analise.validacao_profissional}
-        onAceitar={() => registrarValidacao('aceito', analise.resultado?.grau_sugerido)}
-        onEditar={(grau) => registrarValidacao('editado', grau)}
-        onRejeitar={() => registrarValidacao('rejeitado')}
+        onAceitar={() => registrarValidacao('aceita', analise.resultado?.grau_sugerido)}
+        onEditar={(grau) => registrarValidacao('editada', grau)}
+        onRejeitar={() => registrarValidacao('rejeitada')}
       />
 
       <Text className="text-secundario text-xs mt-4">

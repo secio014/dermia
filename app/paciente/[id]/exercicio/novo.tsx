@@ -21,6 +21,18 @@ export default function NovoExercicio() {
       setErro('Informe o título do exercício.');
       return;
     }
+    if (series && Number(series) <= 0) {
+      setErro('Séries deve ser maior que zero.');
+      return;
+    }
+    if (repeticoes && Number(repeticoes) <= 0) {
+      setErro('Repetições deve ser maior que zero.');
+      return;
+    }
+    if (frequenciaSemanal && (Number(frequenciaSemanal) < 1 || Number(frequenciaSemanal) > 21)) {
+      setErro('Frequência semanal deve ser entre 1 e 21.');
+      return;
+    }
     setErro(null);
     setCarregando(true);
 

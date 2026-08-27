@@ -21,7 +21,11 @@ export default function LoginPortal() {
       setErro(error.message);
       return;
     }
-    router.replace('/portal/index');
+    // O typegen do expo-router alterna entre "/portal" e "/portal/index"
+    // dependendo de qual rota foi visitada por último no dev server; ambas
+    // funcionam em tempo de execução (rota de índice da pasta portal/).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    router.replace('/portal' as any);
   }
 
   return (

@@ -65,7 +65,7 @@ export default function ValidacaoIA({
         Grau sugerido: {resultado?.grau_sugerido ?? 'não informado'}
       </Text>
       {confianca != null && (
-        <Text className="text-secundario text-xs mb-3">Confiança: {confianca}%</Text>
+        <Text className="text-secundario text-xs mb-3">Confiança: {Math.round(confianca * 100)}%</Text>
       )}
 
       {!editando ? (

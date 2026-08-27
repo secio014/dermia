@@ -58,8 +58,13 @@ export default function TelaInicio() {
         </Pressable>
       </Link>
       <Link href="/admin" asChild>
-        <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mb-8">
+        <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mb-3">
           <Text className="text-primaria font-semibold">Painel de Admin</Text>
+        </Pressable>
+      </Link>
+      <Link href="/feedback/novo" asChild>
+        <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mb-8">
+          <Text className="text-secundario font-semibold">Dar feedback do piloto</Text>
         </Pressable>
       </Link>
     </View>

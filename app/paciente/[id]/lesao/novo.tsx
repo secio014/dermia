@@ -6,6 +6,7 @@ import MapaCorporal from '@/components/MapaCorporal';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import {
   GRAUS_CLINICOS,
+  MECANISMOS,
   calcularSCQ,
   percentualDaRegiao,
   rotuloRegiaoCorporal,
@@ -19,7 +20,7 @@ export default function NovaLesao() {
   const [regioes, setRegioes] = useState<RegiaoId[]>([]);
   const [pediatrico, setPediatrico] = useState(false);
   const [grauClinico, setGrauClinico] = useState<string | null>(null);
-  const [mecanismo, setMecanismo] = useState('');
+  const [mecanismo, setMecanismo] = useState<string | null>(null);
   const [observacoes, setObservacoes] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -46,7 +47,7 @@ export default function NovaLesao() {
     const { error } = await supabase.from('lesoes').insert({
       paciente_id: id,
       regiao_corporal: rotuloRegiaoCorporal(regioes),
-      mecanismo: mecanismo.trim() || null,
+      mecanismo,
       data_ocorrencia: new Date().toISOString().slice(0, 10),
       scq_percentual: calcularSCQ(regioes, pediatrico),
       scq_tabela: scqTabela(pediatrico),
@@ -92,13 +93,21 @@ export default function NovaLesao() {
         ))}
       </View>
 
-      <TextInput
-        value={mecanismo}
-        onChangeText={setMecanismo}
-        placeholder="Mecanismo da lesão (ex: escaldadura, chama, elétrica)"
-        placeholderTextColor="#5B6B7F"
-        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
-      />
+      <Text className="text-texto font-semibold mb-2">Mecanismo (opcional)</Text>
+      <View className="flex-row flex-wrap gap-2 mb-3">
+        {MECANISMOS.map((m) => (
+          <Pressable
+            key={m.id}
+            onPress={() => setMecanismo((atual) => (atual === m.id ? null : m.id))}
+            className={`px-3 py-1.5 rounded-lg border ${
+              mecanismo === m.id ? 'bg-primaria border-primaria' : 'bg-superficie border-borda'
+            }`}>
+            <Text className={mecanismo === m.id ? 'text-superficie text-xs' : 'text-secundario text-xs'}>
+              {m.rotulo}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       <TextInput
         value={observacoes}
