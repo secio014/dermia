@@ -44,9 +44,6 @@ yarn-error.*
 # Supabase CLI local cache
 supabase/.temp/
 
-# Backups do banco (contêm dados de pacientes — LGPD, nunca versionar)
-backups/
-
 # editors
 .claude/
 .vscode/

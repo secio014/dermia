@@ -1,110 +1,25 @@
 # DermIA — Próximos passos (ações do Pedro)
 
-Tudo que está pendente e depende de você (contas, instalações, infra, decisões).
-Ordenado por prioridade. O que era código já foi feito nesta rodada — ver o fim
-do arquivo.
+Tudo que está pendente e depende de você (contas, infra, decisões).
+Ordenado por prioridade. O que era código já foi feito — ver o fim do arquivo.
 
 ---
 
-## 1. Commitar o trabalho pendente
+## 1. Enviar as tags (opcional)
 
-O working tree tem mudanças não commitadas desta sessão:
-
-- `scripts/backup.mjs` (novo)
-- `.gitignore` (ignora `backups/`)
-- `docs/PROXIMOS_PASSOS.md` e `docs/PLANO_ROLLOUT.md` (novos)
-- 5 tags anotadas locais: `v1.0-foundation` … `v5.0-production`
-
-```bash
-git add -A
-git commit -m "chore: script de backup, plano de rollout e checklist de proximos passos"
-```
-
-As tags **não** vão junto no `git push` normal. Para enviá-las:
+As 5 tags anotadas (`v1.0-foundation` … `v5.0-production`) são locais. O `git push`
+normal não leva tags junto. Para enviá-las:
 
 ```bash
 git push origin master
 git push origin --tags
 ```
 
-(Enviar as tags é opcional — servem de marco histórico. Se o repo é só local, pode pular.)
+Servem só de marco histórico. Se o repo é só local, pode pular.
 
 ---
 
-## 2. Backup do banco funcionando (plano grátis não tem backup automático)
-
-O script `scripts/backup.mjs` já está pronto, mas precisa de duas coisas suas.
-
-### 2.1. Instalar o `pg_dump`
-
-```powershell
-winget install -e --id PostgreSQL.PostgreSQL.17
-```
-
-Depois adicione ao **PATH do Windows** (Painel de Controle → Editar variáveis de
-ambiente do sistema → Path → Novo):
-
-```
-C:\Program Files\PostgreSQL\17\bin
-```
-
-Feche e reabra o terminal. Confirme:
-
-```powershell
-pg_dump --version    # deve imprimir "pg_dump (PostgreSQL) 17.x"
-```
-
-> A versão do `pg_dump` precisa ser **>= a do servidor Supabase**. O 17 cobre hoje.
-
-### 2.2. Pôr a senha do banco no `.env`
-
-Pegue em: **Supabase Dashboard → Project Settings → Database → Database password**
-(se não lembra, clique em *Reset database password* — isso não afeta a `anon key`
-do app).
-
-Adicione a linha no `.env` da raiz:
-
-```
-SUPABASE_DB_PASSWORD=a-senha-aqui
-```
-
-(o `.env` já está no `.gitignore`)
-
-### 2.3. Rodar
-
-```bash
-node scripts/backup.mjs
-```
-
-Gera `backups/AAAA-MM-DD_HHMM/` com `roles.sql`, `schema.sql`, `data.sql`.
-Mantém os 10 mais recentes (`--manter=20` para mudar).
-
-### 2.4. Agendar (recomendado: 1x/semana durante o piloto)
-
-Task Scheduler do Windows:
-
-1. `Win` → "Agendador de Tarefas" → *Criar Tarefa Básica*
-2. Nome: `DermIA backup semanal`
-3. Disparo: Semanal, escolha o dia/hora (ex.: domingo 20h)
-4. Ação: *Iniciar um programa*
-   - Programa: `node`
-   - Argumentos: `scripts/backup.mjs`
-   - Iniciar em: `C:\Users\pedro\Documents\Repos\dermia`
-5. Concluir.
-
-Guarde uma cópia da pasta `backups/` fora da máquina (OneDrive/Google Drive/pen drive).
-Ela **contém dados de pacientes** — trate como material sigiloso (LGPD).
-
-### 2.5. Restaurar (se precisar)
-
-```bash
-psql "postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres" -f backups/<data>/schema.sql
-psql "postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres" -f backups/<data>/data.sql
-```
-
----
-
-## 3. Verificar RLS no dashboard
+## 2. Verificar RLS no dashboard
 
 Não dá para verificar isso pelo código. Abra `scripts/verificar-rls.sql` e cole o
 conteúdo inteiro no **SQL Editor do Supabase** (não altera nada, só relata). Ele
@@ -137,7 +52,7 @@ alter table public.<tabela> enable row level security;
 
 ---
 
-## 4. Decisão: IA real (Ollama) ou validação manual?
+## 3. Decisão: IA real (Ollama) ou validação manual?
 
 Hoje **toda análise de IA cai em `status: erro`** porque a Edge Function
 `analisar-lesao` não tem host de Ollama configurado. O app não quebra — a
@@ -168,13 +83,13 @@ entra numa fase seguinte.
 
 ---
 
-## 5. Reativar login real (bloqueante para produção / multi-profissional)
+## 4. Reativar login real (bloqueante para produção / multi-profissional)
 
 Hoje o app entra sozinho como `teste@dermia.local` fixo
 (`LOGIN_DESATIVADO = true` em `.lib/dev.ts`). Enquanto isso, **não existe mais de
 um profissional** e o isolamento RLS entre profissionais nunca é exercido.
 
-### 5.1. Criar os profissionais reais no Supabase
+### 4.1. Criar os profissionais reais no Supabase
 
 Abra `scripts/onboarding-clinica.sql`, preencha os valores em `<...>` no topo do
 bloco `do $$` (nome da clínica, nomes/emails/senhas do admin e do fisioterapeuta)
@@ -182,7 +97,7 @@ e rode no SQL Editor do Supabase. Ele já cria clínica + `auth.users` (com as
 colunas de token em `''`, nunca `NULL`) + `profissionais`, com 1 admin + 1
 fisioterapeuta comum — o mínimo para testar o isolamento.
 
-### 5.2. Ligar a tela de login
+### 4.2. Ligar a tela de login
 
 Edite `.lib/dev.ts`:
 
@@ -194,14 +109,14 @@ Só isso já faz `app/_layout.tsx` voltar a renderizar `<Auth />` quando não h�
 sessão, e `.lib/useSessao.ts` para de logar sozinho. (Limpeza opcional depois:
 apagar `.lib/dev.ts` e remover os `import`/guards em `_layout.tsx` e `useSessao.ts`.)
 
-### 5.3. Testar
+### 4.3. Testar
 
 - Abrir o app → aparece a tela de login.
 - Logar como fisioterapeuta A, criar um paciente.
 - Deslogar, logar como fisioterapeuta B → **não** pode ver o paciente de A.
 - Logar como admin → vê os dois (painel de admin).
 
-### 5.4. Atualizar os scripts
+### 4.4. Atualizar os scripts
 
 `scripts/seed-piloto.mjs` e `scripts/limpar-seed.mjs` agora aceitam credenciais
 via env — `SEED_EMAIL=... SEED_SENHA=... node scripts/seed-piloto.mjs` — com
@@ -210,7 +125,7 @@ credenciais de um profissional real ou mantenha o usuário de teste só para ele
 
 ---
 
-## 6. Escolher o alvo de deploy do piloto
+## 5. Escolher o alvo de deploy do piloto
 
 Três caminhos. Para um piloto em clínica, **recomendo a web estática** (mais rápido,
 grátis, sem loja de apps).
@@ -231,9 +146,9 @@ para uso diário.
 npx expo export --platform web    # gera a pasta dist/
 ```
 
-A pasta `dist/` **já foi gerada** nesta rodada (25 rotas, bundle ~2.6 MB). Para
-regerar depois de mudanças no código, rode o comando de novo. Depois publique
-`dist/` num host grátis com HTTPS:
+A pasta `dist/` **já foi gerada** (25 rotas, bundle ~2.6 MB). Para regerar depois
+de mudanças no código, rode o comando de novo. Depois publique `dist/` num host
+grátis com HTTPS:
 
 - **Cloudflare Pages** ou **Netlify** ou **Vercel** — todos têm plano grátis, todos
   dão HTTPS automático.
@@ -265,11 +180,10 @@ pesado, etc.). Passos:
 
 ---
 
-## 7. Checklist final de LGPD / segurança (antes do piloto)
+## 6. Checklist final de LGPD / segurança (antes do piloto)
 
-- [ ] RLS confirmado em todas as tabelas (seção 3)
-- [ ] Backup rodando e testado, cópia fora da máquina (seção 2)
-- [ ] Login real ativado, sem usuário de teste com acesso a dados reais (seção 5)
+- [ ] RLS confirmado em todas as tabelas (seção 2)
+- [ ] Login real ativado, sem usuário de teste com acesso a dados reais (seção 4)
 - [ ] `.env` nunca commitado — OK, já está no `.gitignore`
 - [ ] HTTPS no alvo de deploy — OK em qualquer host da Opção B/C
 - [ ] Consentimento LGPD sendo coletado no cadastro do paciente — já é obrigatório
@@ -282,32 +196,24 @@ pesado, etc.). Passos:
 
 ---
 
-## Feito nesta rodada (código, já no working tree)
+## Feito (código, já no working tree)
 
 - 5 tags anotadas `v1.0-foundation` … `v5.0-production` mapeadas aos commits certos
-- `scripts/backup.mjs` — dump `roles`/`schema`/`data` via Supabase CLI, poda os
-  antigos, preflight de `pg_dump`, senha via env var (corrigido o `EINVAL` do Windows)
-- `.gitignore` — ignora `backups/`
 - `docs/PLANO_ROLLOUT.md` — modelo para expandir para outras clínicas
-- este arquivo
-
-## Feito na rodada seguinte
-
-- `scripts/verificar-rls.sql` — auditoria de RLS pronta pra colar no SQL Editor (seção 3)
+- `scripts/verificar-rls.sql` — auditoria de RLS pronta pra colar no SQL Editor (seção 2)
 - `scripts/onboarding-clinica.sql` — cria clínica + admin + fisioterapeuta, tokens
-  em `''`, só preencher os `<...>` (seção 5.1)
+  em `''`, só preencher os `<...>` (seção 4.1)
 - `scripts/seed-piloto.mjs` / `scripts/limpar-seed.mjs` — aceitam `SEED_EMAIL` /
-  `SEED_SENHA` via env, fallback pro usuário de teste (seção 5.4)
+  `SEED_SENHA` via env, fallback pro usuário de teste (seção 4.4)
 - `dist/` — build web estático gerado (`npx expo export --platform web`), pronto
-  pra arrastar num host (seção 6, Opção B)
+  pra arrastar num host (seção 5, Opção B)
+- este arquivo
 
 ### Continua dependendo só de você (não dá pra automatizar aqui)
 
-1. Instalar PostgreSQL 17 + pôr no PATH, senha do banco no `.env`, rodar/agendar
-   `scripts/backup.mjs` (seção 2)
-2. Colar `scripts/verificar-rls.sql` no dashboard e corrigir o que aparecer (seção 3)
-3. Decidir IA real vs. validação manual (seção 4) — recomendação: manual no piloto
-4. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
-   `LOGIN_DESATIVADO = false` em `.lib/dev.ts` e testar o isolamento (seção 5)
-5. Criar conta num host (Netlify/Cloudflare/Vercel) e publicar `dist/` (seção 6)
-6. Termo de tratamento de dados com a clínica + checklist LGPD (seção 7)
+1. Colar `scripts/verificar-rls.sql` no dashboard e corrigir o que aparecer (seção 2)
+2. Decidir IA real vs. validação manual (seção 3) — recomendação: manual no piloto
+3. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
+   `LOGIN_DESATIVADO = false` em `.lib/dev.ts` e testar o isolamento (seção 4)
+4. Criar conta num host (Netlify/Cloudflare/Vercel) e publicar `dist/` (seção 5)
+5. Termo de tratamento de dados com a clínica + checklist LGPD (seção 6)
