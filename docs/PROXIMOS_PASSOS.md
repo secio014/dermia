@@ -141,7 +141,12 @@ Clínica instala o app **Expo Go** no celular e escaneia o QR. Limitação: prec
 sua máquina rodando o servidor na mesma rede / com túnel. Bom só para demo, não
 para uso diário.
 
-### Opção B — Web estática (recomendado)
+### Opção B — Web estática (recomendado) — ✅ NO AR
+
+Publicado no Netlify: **https://deft-capybara-a49de4.netlify.app/**
+(SPA fallback OK — rota profunda responde 200). Para atualizar: rodar o
+`expo export` de novo e re-arrastar `dist/` em app.netlify.com/drop (ou conectar
+o repo pra deploy automático).
 
 ```bash
 npx expo export --platform web    # gera a pasta dist/
@@ -182,7 +187,7 @@ navegador via HTTPS.
 - [x] RLS confirmado em todas as tabelas (seção 2)
 - [ ] Login real ativado, sem usuário de teste com acesso a dados reais (seção 4)
 - [ ] `.env` nunca commitado — OK, já está no `.gitignore`
-- [ ] HTTPS no alvo de deploy — OK em qualquer host da Opção B/C
+- [x] HTTPS no alvo de deploy — Netlify (web) já com HTTPS automático
 - [ ] Consentimento LGPD sendo coletado no cadastro do paciente — já é obrigatório
       no fluxo (trigger no banco bloqueia foto sem `consentimento_em`)
 - [ ] Termo/contrato de tratamento de dados assinado com a clínica parceira
@@ -214,6 +219,6 @@ navegador via HTTPS.
 1. Decidir IA real vs. validação manual (seção 3) — recomendação: manual no piloto
 2. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
    `LOGIN_DESATIVADO = false` em `.lib/dev.ts` e testar o isolamento (seção 4)
-3. Publicar `dist/` no Netlify (seção 5, Opção B) + `eas login` / `eas init` /
-   `eas build -p android --profile preview` pro APK (seção 5, Opção C)
+3. `eas login` / `eas init` / `eas build -p android --profile preview` pro APK
+   (seção 5, Opção C) — web já publicada no Netlify
 4. Termo de tratamento de dados com a clínica + checklist LGPD (seção 6)
