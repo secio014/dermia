@@ -39,6 +39,7 @@ export default function TabLayout() {
           name={item.nome}
           options={{
             title: item.titulo,
+            headerTitle: item.nome === 'index' ? 'Derm.IA' : item.titulo,
             tabBarIcon: ({ color }) => <Ionicons name={item.icone} size={24} color={color} />,
           }}
         />
