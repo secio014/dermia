@@ -1,7 +1,20 @@
+import { palette } from '@/constants/Colors';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 
 export type StatusConsulta = 'agendada' | 'realizada' | 'faltou' | 'cancelada';
+
+// Cor + rótulo + estilo de cada status, compartilhado entre a agenda e o
+// detalhe da consulta.
+export const ESTILO_STATUS: Record<
+  StatusConsulta,
+  { cor: string; rotulo: string; riscado?: boolean; opacidade?: number }
+> = {
+  agendada: { cor: palette.primaria, rotulo: 'Agendada' },
+  realizada: { cor: palette.ok, rotulo: 'Realizada' },
+  faltou: { cor: palette.atencao, rotulo: 'Faltou', riscado: true },
+  cancelada: { cor: palette.secundario, rotulo: 'Cancelada', riscado: true, opacidade: 0.55 },
+};
 
 export type Consulta = {
   id: string;
@@ -66,6 +79,20 @@ export async function listarConsultas(de: Date, ate: Date): Promise<ConsultaComP
   return (data as ConsultaComPaciente[] | null) ?? [];
 }
 
+// Todas as consultas agendadas daqui pra frente (independente da semana visível).
+export async function listarProximasConsultas(limite = 100): Promise<ConsultaComPaciente[]> {
+  const { data } = await supabase
+    .from('consultas')
+    .select(
+      'id, paciente_id, profissional_id, inicio_em, duracao_min, motivo, observacoes, status, paciente:pacientes(nome_completo, codigo_pseudonimo)'
+    )
+    .eq('status', 'agendada')
+    .gte('inicio_em', new Date().toISOString())
+    .order('inicio_em', { ascending: true })
+    .limit(limite);
+  return (data as ConsultaComPaciente[] | null) ?? [];
+}
+
 export async function proximaConsulta(pacienteId: string): Promise<Consulta | null> {
   const { data } = await supabase
     .from('consultas')
@@ -98,14 +125,19 @@ type DadosConsulta = {
   observacoes?: string | null;
 };
 
-export async function criarConsulta(dados: DadosConsulta): Promise<{ error: string | null }> {
+export async function criarConsulta(
+  dados: DadosConsulta
+): Promise<{ error: string | null; id: string | null }> {
   const perfil = await obterPerfilProfissional();
-  if (!perfil) return { error: 'Não foi possível identificar o profissional logado.' };
-  const { error } = await supabase.from('consultas').insert({
-    ...dados,
-    profissional_id: perfil.id,
-  });
-  return { error: error?.message ?? null };
+  if (!perfil) {
+    return { error: 'Não foi possível identificar o profissional logado.', id: null };
+  }
+  const { data, error } = await supabase
+    .from('consultas')
+    .insert({ ...dados, profissional_id: perfil.id })
+    .select('id')
+    .single();
+  return { error: error?.message ?? null, id: (data?.id as string | undefined) ?? null };
 }
 
 export async function atualizarConsulta(

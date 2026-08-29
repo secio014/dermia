@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 
 import { palette } from '@/constants/Colors';
+import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import {
   diasDaSemana,
   inicioDaSemana,
   listarConsultas,
+  listarProximasConsultas,
   mesmaData,
+  ESTILO_STATUS,
   HORA_INICIO,
   HORA_FIM,
   type ConsultaComPaciente,
@@ -26,11 +29,13 @@ const ALTURA_HORA = 56;
 const LARGURA_DIA = 116;
 const DIAS_LABEL = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-function corStatus(status: StatusConsulta): string {
-  if (status === 'realizada') return palette.ok;
-  if (status === 'faltou' || status === 'cancelada') return palette.risco;
-  return palette.primaria;
-}
+type FiltroData = 'todas' | 'hoje' | 'semana' | 'mes';
+const FILTROS_DATA: { id: FiltroData; rotulo: string }[] = [
+  { id: 'todas', rotulo: 'Todas' },
+  { id: 'hoje', rotulo: 'Hoje' },
+  { id: 'semana', rotulo: '7 dias' },
+  { id: 'mes', rotulo: '30 dias' },
+];
 
 function hhmm(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -38,8 +43,11 @@ function hhmm(iso: string): string {
 
 export default function TelaAgenda() {
   const { cores } = useTema();
+  const largo = useLargo();
   const [ref, setRef] = useState(() => new Date());
   const [consultas, setConsultas] = useState<ConsultaComPaciente[]>([]);
+  const [todasProximas, setTodasProximas] = useState<ConsultaComPaciente[]>([]);
+  const [filtroData, setFiltroData] = useState<FiltroData>('todas');
   const [carregando, setCarregando] = useState(true);
 
   const dias = useMemo(() => diasDaSemana(ref), [ref]);
@@ -52,7 +60,12 @@ export default function TelaAgenda() {
     const inicio = inicioDaSemana(ref);
     const fim = new Date(inicio);
     fim.setDate(fim.getDate() + 7);
-    setConsultas(await listarConsultas(inicio, fim));
+    const [daSemana, proximasTodas] = await Promise.all([
+      listarConsultas(inicio, fim),
+      listarProximasConsultas(),
+    ]);
+    setConsultas(daSemana);
+    setTodasProximas(proximasTodas);
     setCarregando(false);
   }, [ref]);
 
@@ -69,16 +82,83 @@ export default function TelaAgenda() {
   }
 
   const proximas = useMemo(() => {
-    const agora = new Date();
-    return [...consultas]
-      .filter((c) => new Date(c.inicio_em) >= agora && c.status === 'agendada')
-      .sort((a, b) => a.inicio_em.localeCompare(b.inicio_em));
-  }, [consultas]);
+    if (filtroData === 'todas') return todasProximas;
+    const limite = new Date();
+    if (filtroData === 'hoje') limite.setHours(23, 59, 59, 999);
+    else if (filtroData === 'semana') limite.setDate(limite.getDate() + 7);
+    else if (filtroData === 'mes') limite.setDate(limite.getDate() + 30);
+    return todasProximas.filter((c) => new Date(c.inicio_em) <= limite);
+  }, [todasProximas, filtroData]);
 
   const rotuloSemana = `${dias[0].toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
   })} – ${dias[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`;
+
+  const listaProximas = (
+    <>
+      <Text className="text-texto font-bold mb-2">
+        Próximas consultas{todasProximas.length > 0 ? ` (${proximas.length})` : ''}
+      </Text>
+
+      <View className="flex-row flex-wrap gap-2 mb-3">
+        {FILTROS_DATA.map((f) => {
+          const ativo = filtroData === f.id;
+          return (
+            <Pressable
+              key={f.id}
+              onPress={() => setFiltroData(f.id)}
+              className={`rounded-full px-3 py-1.5 border ${
+                ativo ? 'bg-primaria border-primaria' : 'bg-superficie border-borda'
+              }`}>
+              <Text className={`text-xs font-semibold ${ativo ? 'text-white' : 'text-secundario'}`}>
+                {f.rotulo}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {proximas.length === 0 ? (
+        <Text className="text-secundario text-sm">
+          {todasProximas.length === 0
+            ? 'Nenhuma consulta agendada.'
+            : 'Nada nesse período.'}
+        </Text>
+      ) : (
+        proximas.map((c) => (
+          <Pressable
+            key={c.id}
+            onPress={() => router.push(`/consulta/${c.id}`)}
+            className="bg-superficie border border-borda rounded-xl p-3 mb-2 flex-row items-center gap-3">
+            <View className="items-center w-12">
+              <Text className="text-texto font-bold text-xs">
+                {new Date(c.inicio_em).toLocaleDateString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                })}
+              </Text>
+              <Text className="text-secundario text-xs">{hhmm(c.inicio_em)}</Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-texto font-semibold" numberOfLines={1}>
+                {c.paciente?.nome_completo ?? c.paciente?.codigo_pseudonimo ?? 'Paciente'}
+              </Text>
+              <Text className="text-secundario text-xs" numberOfLines={1}>
+                {new Date(c.inicio_em).toLocaleDateString('pt-BR', {
+                  weekday: 'short',
+                  day: '2-digit',
+                  month: 'long',
+                })}
+                {c.motivo ? ` · ${c.motivo}` : ''}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={cores.secundario} />
+          </Pressable>
+        ))
+      )}
+    </>
+  );
 
   return (
     <View className="flex-1 bg-fundo">
@@ -107,11 +187,30 @@ export default function TelaAgenda() {
         </Pressable>
       </View>
 
+      <View className="px-4 pb-2 flex-row flex-wrap gap-x-3 gap-y-1">
+        {(Object.keys(ESTILO_STATUS) as StatusConsulta[]).map((s) => {
+          const est = ESTILO_STATUS[s];
+          return (
+            <View key={s} className="flex-row items-center gap-1">
+              <View
+                style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: est.cor }}
+              />
+              <Text
+                className="text-secundario text-[11px]"
+                style={est.riscado ? { textDecorationLine: 'line-through' } : undefined}>
+                {est.rotulo}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
       {carregando ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={palette.primaria} />
         </View>
       ) : (
+        <View className={largo ? 'flex-1 flex-row' : 'flex-1'}>
         <ScrollView className="flex-1">
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row px-4 pb-4">
@@ -159,6 +258,7 @@ export default function TelaAgenda() {
                           (d.getHours() - HORA_INICIO + d.getMinutes() / 60) * ALTURA_HORA;
                         const altura = Math.max((c.duracao_min / 60) * ALTURA_HORA, 22);
                         if (top < -altura || top > horas.length * ALTURA_HORA) return null;
+                        const est = ESTILO_STATUS[c.status];
                         return (
                           <Pressable
                             key={c.id}
@@ -169,15 +269,21 @@ export default function TelaAgenda() {
                               left: 3,
                               right: 3,
                               height: altura,
-                              backgroundColor: corStatus(c.status),
+                              backgroundColor: est.cor,
                               borderRadius: 8,
                               padding: 4,
-                              opacity: c.status === 'cancelada' ? 0.5 : 1,
+                              opacity: est.opacidade ?? 1,
                             }}>
-                            <Text className="text-white text-[10px] font-bold" numberOfLines={1}>
+                            <Text
+                              className="text-white text-[10px] font-bold"
+                              numberOfLines={1}
+                              style={est.riscado ? { textDecorationLine: 'line-through' } : undefined}>
                               {hhmm(c.inicio_em)}
                             </Text>
-                            <Text className="text-white text-[10px]" numberOfLines={1}>
+                            <Text
+                              className="text-white text-[10px]"
+                              numberOfLines={1}
+                              style={est.riscado ? { textDecorationLine: 'line-through' } : undefined}>
                               {c.paciente?.codigo_pseudonimo ?? 'Paciente'}
                             </Text>
                           </Pressable>
@@ -190,41 +296,20 @@ export default function TelaAgenda() {
             </View>
           </ScrollView>
 
-          <View className="px-4 pb-10 w-full max-w-3xl self-center">
-            <Text className="text-texto font-bold mb-2">Próximas consultas</Text>
-            {proximas.length === 0 ? (
-              <Text className="text-secundario text-sm">Nada agendado nesta semana.</Text>
-            ) : (
-              proximas.map((c) => (
-                <Pressable
-                  key={c.id}
-                  onPress={() => router.push(`/consulta/${c.id}`)}
-                  className="bg-superficie border border-borda rounded-xl p-3 mb-2 flex-row items-center gap-3">
-                  <View className="items-center">
-                    <Text className="text-texto font-bold text-xs">
-                      {new Date(c.inicio_em).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                      })}
-                    </Text>
-                    <Text className="text-secundario text-xs">{hhmm(c.inicio_em)}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-texto font-semibold" numberOfLines={1}>
-                      {c.paciente?.nome_completo ?? c.paciente?.codigo_pseudonimo ?? 'Paciente'}
-                    </Text>
-                    {c.motivo ? (
-                      <Text className="text-secundario text-xs" numberOfLines={1}>
-                        {c.motivo}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={cores.secundario} />
-                </Pressable>
-              ))
-            )}
-          </View>
+          {!largo && (
+            <View className="px-4 pb-10 w-full max-w-3xl self-center">{listaProximas}</View>
+          )}
         </ScrollView>
+
+        {largo && (
+          <ScrollView
+            className="border-l border-borda"
+            style={{ width: 340 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+            {listaProximas}
+          </ScrollView>
+        )}
+        </View>
       )}
     </View>
   );

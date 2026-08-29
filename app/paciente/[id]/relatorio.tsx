@@ -95,7 +95,10 @@ export default function RelatorioPaciente() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName="w-full max-w-xl self-center"
+      contentContainerStyle={{ paddingBottom: 32 }}>
       <Text className="text-texto text-lg font-bold mb-4">Relatório em PDF</Text>
 
       <Text className="text-secundario text-xs mb-1">Período (opcional)</Text>

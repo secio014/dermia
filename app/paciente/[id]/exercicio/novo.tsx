@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 
@@ -59,6 +60,7 @@ export default function NovoExercicio() {
       setErro(error.message);
       return;
     }
+    avisar('Exercício prescrito.');
     router.back();
   }
 

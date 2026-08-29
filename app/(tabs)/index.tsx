@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import PacienteCard, { type PainelPaciente } from '@/components/PacienteCard';
 import { palette } from '@/constants/Colors';
+import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
@@ -48,6 +49,7 @@ function Estatistica({
 
 export default function TelaInicio() {
   const { cores } = useTema();
+  const largo = useLargo();
   const [pacientes, setPacientes] = useState<PainelPaciente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
@@ -156,6 +158,9 @@ export default function TelaInicio() {
     <View className="flex-1 bg-fundo px-5">
       <FlatList
         data={lista}
+        key={largo ? 'grade-2' : 'grade-1'}
+        numColumns={largo ? 2 : 1}
+        columnWrapperStyle={largo ? { gap: 16 } : undefined}
         keyExtractor={(item) => item.lesao_id ?? item.paciente_id}
         ListHeaderComponent={cabecalho}
         contentContainerClassName="pb-8 w-full max-w-4xl self-center"
@@ -183,7 +188,9 @@ export default function TelaInicio() {
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/paciente/${item.paciente_id}`)}>
+          <Pressable
+            onPress={() => router.push(`/paciente/${item.paciente_id}`)}
+            className={largo ? 'flex-1' : undefined}>
             <PacienteCard paciente={item} />
           </Pressable>
         )}

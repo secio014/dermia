@@ -18,6 +18,7 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import Auth from '@/components/Auth';
+import Aviso from '@/components/ui/Aviso';
 import { paletas, palette } from '@/constants/Colors';
 import { instalarFonteInter } from '@/.lib/fonte';
 import { useTema } from '@/.lib/tema';
@@ -91,6 +92,7 @@ export default function RootLayout() {
           />
           <Stack.Screen name="consulta/[id]" options={{ title: 'Consulta' }} />
         </Stack>
+        <Aviso />
       </View>
     </ThemeProvider>
   );

@@ -14,7 +14,9 @@ import {
 import { palette } from '@/constants/Colors';
 import { GRAUS_CLINICOS } from '@/.lib/scq';
 import { proximaConsulta, type Consulta } from '@/.lib/agenda';
+import { avisar } from '@/.lib/aviso';
 import { encerrarPrescricao, listarPrescricoes, type Prescricao } from '@/.lib/prescricoes';
+import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
@@ -54,6 +56,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 export default function DetalhePaciente() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { cores } = useTema();
+  const largo = useLargo();
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [lesoes, setLesoes] = useState<Lesao[]>([]);
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
@@ -128,17 +131,9 @@ export default function DetalhePaciente() {
     );
   }
 
-  return (
-    <ScrollView
-      className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-2xl self-center"
-      contentContainerStyle={{ paddingBottom: 40 }}>
-      <Stack.Screen options={{ title: paciente?.nome_completo ?? 'Paciente' }} />
-      <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome_completo}</Text>
-      <Text className="text-secundario mb-5">{paciente?.codigo_pseudonimo}</Text>
-
-      {/* Próxima consulta */}
-      <View className="bg-superficie border border-borda rounded-xl p-4 mb-6 flex-row items-center gap-3">
+  // Próxima consulta
+  const cardConsulta = (
+    <View className="bg-superficie border border-borda rounded-xl p-4 mb-6 flex-row items-center gap-3">
         <Ionicons name="calendar-outline" size={22} color={cores.primaria} />
         <View className="flex-1">
           <Text className="text-secundario text-xs">Próxima consulta</Text>
@@ -153,14 +148,16 @@ export default function DetalhePaciente() {
               : 'Nenhuma agendada'}
           </Text>
         </View>
-        <Pressable
-          onPress={() => router.push(`/consulta/nova?pacienteId=${id}`)}
-          className="bg-primaria rounded-lg px-3 py-2">
-          <Text className="text-white text-xs font-semibold">Agendar</Text>
-        </Pressable>
-      </View>
+      <Pressable
+        onPress={() => router.push(`/consulta/nova?pacienteId=${id}`)}
+        className="bg-primaria rounded-lg px-3 py-2">
+        <Text className="text-white text-xs font-semibold">Agendar</Text>
+      </Pressable>
+    </View>
+  );
 
-      <Secao titulo="Lesões">
+  const secaoLesoes = (
+    <Secao titulo="Lesões">
         {lesoes.length === 0 ? (
           <Text className="text-secundario">Nenhuma lesão registrada ainda.</Text>
         ) : (
@@ -185,14 +182,16 @@ export default function DetalhePaciente() {
             </Pressable>
           ))
         )}
-        <Link href={`/paciente/${id}/lesao/novo`} asChild>
-          <Pressable className="bg-primaria rounded-xl py-3 items-center mt-1">
-            <Text className="text-white font-semibold">+ Nova lesão</Text>
-          </Pressable>
-        </Link>
-      </Secao>
+      <Link href={`/paciente/${id}/lesao/novo`} asChild>
+        <Pressable className="bg-primaria rounded-xl py-3 items-center mt-1">
+          <Text className="text-white font-semibold">+ Nova lesão</Text>
+        </Pressable>
+      </Link>
+    </Secao>
+  );
 
-      <Secao titulo="Remédios e curativos">
+  const secaoRemedios = (
+    <Secao titulo="Remédios e curativos">
         {prescricoes.length === 0 ? (
           <Text className="text-secundario">Nada prescrito no momento.</Text>
         ) : (
@@ -202,20 +201,29 @@ export default function DetalhePaciente() {
               <Text className="text-secundario text-xs">
                 {[p.dose, p.frequencia].filter(Boolean).join(' · ') || 'Sem posologia'}
               </Text>
-              <Pressable onPress={() => encerrarPrescricao(p.id).then(carregar)} className="mt-2">
+              <Pressable
+                onPress={() =>
+                  encerrarPrescricao(p.id).then(() => {
+                    avisar('Prescrição encerrada.');
+                    carregar();
+                  })
+                }
+                className="mt-2">
                 <Text className="text-risco text-xs font-semibold">Encerrar</Text>
               </Pressable>
             </View>
           ))
         )}
-        <Link href={`/paciente/${id}/prescricao/nova`} asChild>
-          <Pressable className="bg-superficie border border-primaria rounded-xl py-3 items-center mt-1">
-            <Text className="text-primaria font-semibold">+ Prescrever</Text>
-          </Pressable>
-        </Link>
-      </Secao>
+      <Link href={`/paciente/${id}/prescricao/nova`} asChild>
+        <Pressable className="bg-superficie border border-primaria rounded-xl py-3 items-center mt-1">
+          <Text className="text-primaria font-semibold">+ Prescrever</Text>
+        </Pressable>
+      </Link>
+    </Secao>
+  );
 
-      <Secao titulo="Exercícios prescritos">
+  const secaoExercicios = (
+    <Secao titulo="Exercícios prescritos">
         {exercicios.length === 0 ? (
           <Text className="text-secundario">Nenhum exercício prescrito ainda.</Text>
         ) : (
@@ -239,20 +247,24 @@ export default function DetalhePaciente() {
             );
           })
         )}
-        <Link href={`/paciente/${id}/exercicio/novo`} asChild>
-          <Pressable className="bg-superficie border border-primaria rounded-xl py-3 items-center mt-1">
-            <Text className="text-primaria font-semibold">+ Prescrever exercício</Text>
-          </Pressable>
-        </Link>
-      </Secao>
-
-      <Link href={`/paciente/${id}/relatorio`} asChild>
-        <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mb-6">
-          <Text className="text-texto font-semibold">Gerar relatório em PDF</Text>
+      <Link href={`/paciente/${id}/exercicio/novo`} asChild>
+        <Pressable className="bg-superficie border border-primaria rounded-xl py-3 items-center mt-1">
+          <Text className="text-primaria font-semibold">+ Prescrever exercício</Text>
         </Pressable>
       </Link>
+    </Secao>
+  );
 
-      <Secao titulo="Acesso ao portal do paciente">
+  const botaoRelatorio = (
+    <Link href={`/paciente/${id}/relatorio`} asChild>
+      <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mb-6">
+        <Text className="text-texto font-semibold">Gerar relatório em PDF</Text>
+      </Pressable>
+    </Link>
+  );
+
+  const secaoPortal = (
+    <Secao titulo="Acesso ao portal do paciente">
         {paciente?.user_id ? (
           <View className="bg-superficie border border-ok rounded-xl p-4 flex-row items-center gap-2">
             <Ionicons name="checkmark-circle" size={18} color={palette.ok} />
@@ -300,7 +312,43 @@ export default function DetalhePaciente() {
             </Pressable>
           </View>
         )}
-      </Secao>
+    </Secao>
+  );
+
+  return (
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : 'w-full max-w-2xl self-center'}
+      contentContainerStyle={{ paddingBottom: 40 }}>
+      <Stack.Screen options={{ title: paciente?.nome_completo ?? 'Paciente' }} />
+      <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome_completo}</Text>
+      <Text className="text-secundario mb-5">{paciente?.codigo_pseudonimo}</Text>
+
+      {largo ? (
+        <>
+          {cardConsulta}
+          <View className="flex-row gap-6">
+            <View className="flex-1">
+              {secaoLesoes}
+              {botaoRelatorio}
+            </View>
+            <View className="flex-1">
+              {secaoRemedios}
+              {secaoExercicios}
+              {secaoPortal}
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {cardConsulta}
+          {secaoLesoes}
+          {secaoRemedios}
+          {secaoExercicios}
+          {botaoRelatorio}
+          {secaoPortal}
+        </>
+      )}
     </ScrollView>
   );
 }

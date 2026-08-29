@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
+import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 
@@ -60,6 +61,7 @@ export default function NovoPaciente() {
       setErro(error.message);
       return;
     }
+    avisar('Paciente cadastrado.');
     router.replace(`/paciente/${data.id}`);
   }
 

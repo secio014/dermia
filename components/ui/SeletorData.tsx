@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, Text, View } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTema } from '@/.lib/tema';
@@ -38,6 +45,8 @@ export default function SeletorData({
   opcional?: boolean;
 }) {
   const { cores } = useTema();
+  const { width } = useWindowDimensions();
+  const webLargo = Platform.OS === 'web' && width >= 768;
   const [aberto, setAberto] = useState(false);
   const selecionada = deISO(valor);
   const [mesRef, setMesRef] = useState(() => selecionada ?? new Date());
@@ -59,9 +68,17 @@ export default function SeletorData({
 
   const hoje = new Date();
 
-  function calendario() {
+  function calendario(folha = false) {
     return (
-      <View className="bg-superficie border border-borda rounded-2xl p-4 w-[320px] max-w-full">
+      <View
+        className={
+          folha
+            ? 'bg-superficie border-t border-borda rounded-t-3xl p-4 w-full'
+            : 'bg-superficie border border-borda rounded-2xl p-4 w-[320px] max-w-full'
+        }>
+        {folha && (
+          <View className="self-center w-10 h-1 rounded-full bg-borda mb-3" />
+        )}
         <View className="flex-row items-center justify-between mb-3">
           <Pressable
             onPress={() => setMesRef(new Date(mesRef.getFullYear(), mesRef.getMonth() - 1, 1))}
@@ -145,7 +162,7 @@ export default function SeletorData({
   }
 
   return (
-    <View style={{ position: 'relative', zIndex: aberto ? 9999 : 0 }}>
+    <View>
       <Pressable
         onPress={() => setAberto((a) => !a)}
         className="bg-superficie border border-borda rounded-xl px-4 py-3 flex-row items-center justify-between">
@@ -153,28 +170,27 @@ export default function SeletorData({
         <Ionicons name="calendar-outline" size={18} color={cores.secundario} />
       </Pressable>
 
-      {aberto && Platform.OS === 'web' && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: '100%',
-            marginLeft: 8,
-            zIndex: 9999,
-            // web-only: destaca o calendário sobre os campos
-            boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
-            borderRadius: 16,
-          }}>
-          {calendario()}
-        </View>
-      )}
-
-      {aberto && Platform.OS !== 'web' && (
-        <Modal transparent animationType="fade" onRequestClose={() => setAberto(false)}>
+      {/* O calendário sempre abre num Modal (portal): na web do RN todo <View> é
+          um stacking context próprio, então um popover absoluto ficaria preso
+          atrás dos campos seguintes. Web larga = card centralizado; celular e
+          web estreita = folha deslizando do rodapé. */}
+      {aberto && (
+        <Modal
+          transparent
+          animationType={webLargo ? 'fade' : 'slide'}
+          onRequestClose={() => setAberto(false)}>
           <Pressable
             onPress={() => setAberto(false)}
-            className="flex-1 bg-black/40 items-center justify-center px-6">
-            <Pressable onPress={(e) => e.stopPropagation()}>{calendario()}</Pressable>
+            className={
+              webLargo
+                ? 'flex-1 bg-black/40 items-center justify-center px-6'
+                : 'flex-1 bg-black/40 justify-end'
+            }>
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              className={webLargo ? undefined : 'pb-6'}>
+              {calendario(!webLargo)}
+            </Pressable>
           </Pressable>
         </Modal>
       )}

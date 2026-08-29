@@ -135,7 +135,10 @@ export default function TelaAdmin() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName="w-full max-w-3xl self-center"
+      contentContainerStyle={{ paddingBottom: 32 }}>
       <Text className="text-texto text-xl font-bold mb-4">Painel de Admin</Text>
 
       <View className="flex-row gap-3 mb-3">

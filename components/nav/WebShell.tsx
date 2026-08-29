@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Animated, Pressable, Text, View } from 'react-native';
 
 import { ITENS_NAV } from '@/components/nav/itens';
+import WebFooter from '@/components/nav/WebFooter';
 import { useTema } from '@/.lib/tema';
 
 const CHAVE_MENU = 'dermia:menu-aberto';
@@ -127,10 +128,11 @@ export default function WebShell() {
         </View>
       </Animated.View>
 
-      <View className="flex-1 bg-fundo items-stretch">
+      <View className="flex-1 bg-fundo">
         <View className="flex-1 w-full self-center" style={{ maxWidth: 1100 }}>
           <Slot />
         </View>
+        <WebFooter />
       </View>
     </View>
   );

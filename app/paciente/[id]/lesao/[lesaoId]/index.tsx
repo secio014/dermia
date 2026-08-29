@@ -6,6 +6,7 @@ import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvoluca
 import { palette } from '@/constants/Colors';
 import GraficoVancouver, { type PontoVancouver } from '@/components/GraficoVancouver';
 import { obterUrlAssinada } from '@/.lib/foto';
+import { useLargo } from '@/.lib/responsivo';
 import { supabase } from '@/.lib/supabase';
 import { totalVancouver, type EscalaCicatriz } from '@/.lib/vancouver';
 
@@ -36,6 +37,7 @@ type Registro = {
 
 export default function EvolucaoLesao() {
   const { id, lesaoId } = useLocalSearchParams<{ id: string; lesaoId: string }>();
+  const largo = useLargo();
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [filtro, setFiltro] = useState<string | null>(null);
@@ -117,8 +119,74 @@ export default function EvolucaoLesao() {
     );
   }
 
+  const blocoGraficos = (
+    <>
+      <Text className="text-texto font-semibold mb-2">Cicatriz (Vancouver)</Text>
+      <View className="mb-4">
+        <GraficoVancouver pontos={pontosVancouver} />
+      </View>
+
+      {combinacoes.length > 0 && (
+        <View className="flex-row flex-wrap gap-2 mb-3">
+          {combinacoes.map((c) => (
+            <Pressable
+              key={c}
+              onPress={() => setFiltro(c)}
+              className={`px-3 py-1.5 rounded-lg border ${
+                c === chaveAtiva ? 'bg-primaria border-primaria' : 'bg-superficie border-borda'
+              }`}>
+              <Text className={c === chaveAtiva ? 'text-superficie text-xs' : 'text-secundario text-xs'}>
+                {c}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      <GraficoEvolucao pontos={pontos} />
+    </>
+  );
+
+  const blocoRegistros = (
+    <>
+      <Text className="text-texto font-semibold mb-2">Registros</Text>
+      {registros.length === 0 ? (
+        <Text className="text-secundario mb-4">Nenhum registro de evolução ainda.</Text>
+      ) : (
+        [...registros].reverse().map((r) => (
+          <View key={r.id} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
+            <View className="flex-row justify-between mb-1">
+              <Text className="text-texto font-semibold">
+                {new Date(r.data_atendimento).toLocaleDateString('pt-BR')}
+              </Text>
+              {r.dor_eva != null && (
+                <Text className="text-secundario text-xs">Dor (EVA): {r.dor_eva}/10</Text>
+              )}
+            </View>
+            {r.adm.map((g, i) => (
+              <Text key={i} className="text-secundario text-xs">
+                {g.articulacao} · {g.movimento}: ativo {g.grau_ativo}° / passivo {g.grau_passivo}°
+                {g.referencia ? ` (ref. ${g.referencia}°)` : ''}
+              </Text>
+            ))}
+            {r.descricao && <Text className="text-secundario text-xs mt-1">{r.descricao}</Text>}
+          </View>
+        ))
+      )}
+
+      <Link href={`/paciente/${id}/lesao/${lesaoId}/registro/novo`} asChild>
+        <Pressable className="bg-primaria rounded-xl py-3 items-center mt-2">
+          <Text className="text-superficie font-semibold">+ Novo registro</Text>
+        </Pressable>
+      </Link>
+    </>
+  );
+
   return (
-    <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
+      contentContainerStyle={{ paddingBottom: 32 }}>
       <Text className="text-texto text-lg font-bold mb-3">Evolução da lesão</Text>
 
       <Text className="text-texto font-semibold mb-2">Fotos</Text>
@@ -152,60 +220,18 @@ export default function EvolucaoLesao() {
         </Link>
       )}
 
-      <Text className="text-texto font-semibold mb-2">Cicatriz (Vancouver)</Text>
-      <View className="mb-4">
-        <GraficoVancouver pontos={pontosVancouver} />
-      </View>
-
-      {combinacoes.length > 0 && (
-        <View className="flex-row flex-wrap gap-2 mb-3">
-          {combinacoes.map((c) => (
-            <Pressable
-              key={c}
-              onPress={() => setFiltro(c)}
-              className={`px-3 py-1.5 rounded-lg border ${
-                c === chaveAtiva ? 'bg-primaria border-primaria' : 'bg-superficie border-borda'
-              }`}>
-              <Text className={c === chaveAtiva ? 'text-superficie text-xs' : 'text-secundario text-xs'}>
-                {c}
-              </Text>
-            </Pressable>
-          ))}
+      {largo ? (
+        <View className="flex-row gap-6">
+          <View className="flex-1">{blocoGraficos}</View>
+          <View className="flex-1">{blocoRegistros}</View>
         </View>
-      )}
-
-      <GraficoEvolucao pontos={pontos} />
-
-      <Text className="text-texto font-semibold mt-6 mb-2">Registros</Text>
-      {registros.length === 0 ? (
-        <Text className="text-secundario mb-4">Nenhum registro de evolução ainda.</Text>
       ) : (
-        [...registros].reverse().map((r) => (
-          <View key={r.id} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
-            <View className="flex-row justify-between mb-1">
-              <Text className="text-texto font-semibold">
-                {new Date(r.data_atendimento).toLocaleDateString('pt-BR')}
-              </Text>
-              {r.dor_eva != null && (
-                <Text className="text-secundario text-xs">Dor (EVA): {r.dor_eva}/10</Text>
-              )}
-            </View>
-            {r.adm.map((g, i) => (
-              <Text key={i} className="text-secundario text-xs">
-                {g.articulacao} · {g.movimento}: ativo {g.grau_ativo}° / passivo {g.grau_passivo}°
-                {g.referencia ? ` (ref. ${g.referencia}°)` : ''}
-              </Text>
-            ))}
-            {r.descricao && <Text className="text-secundario text-xs mt-1">{r.descricao}</Text>}
-          </View>
-        ))
+        <>
+          {blocoGraficos}
+          <View className="mt-6" />
+          {blocoRegistros}
+        </>
       )}
-
-      <Link href={`/paciente/${id}/lesao/${lesaoId}/registro/novo`} asChild>
-        <Pressable className="bg-primaria rounded-xl py-3 items-center mt-2">
-          <Text className="text-superficie font-semibold">+ Novo registro</Text>
-        </Pressable>
-      </Link>
     </ScrollView>
   );
 }

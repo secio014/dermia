@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
+import { avisar } from '@/.lib/aviso';
 import { useTema } from '@/.lib/tema';
 import { criarPrescricao } from '@/.lib/prescricoes';
 
@@ -41,6 +42,7 @@ export default function NovaPrescricao() {
       setErro(error);
       return;
     }
+    avisar('Prescrição adicionada.');
     router.back();
   }
 

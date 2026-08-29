@@ -102,7 +102,7 @@ export default function MapaCorporal({
             const g = GEOMETRIA[regiao];
             const marcada = value.includes(regiao);
             return (
-              <G key={regiao} onPress={() => alternarRegiao(regiao)}>
+              <G key={regiao}>
                 <Rect
                   x={g.x}
                   y={g.y}
@@ -112,6 +112,7 @@ export default function MapaCorporal({
                   fill={marcada ? cores.risco : cores.primariaSuave}
                   stroke={marcada ? cores.risco : cores.borda}
                   strokeWidth={marcada ? 3 : 2}
+                  onPress={() => alternarRegiao(regiao)}
                 />
                 <SvgText
                   x={g.x + g.w / 2}
@@ -119,7 +120,8 @@ export default function MapaCorporal({
                   fontSize={11}
                   fontWeight="bold"
                   textAnchor="middle"
-                  fill={marcada ? cores.superficie : cores.secundario}>
+                  fill={marcada ? cores.superficie : cores.secundario}
+                  pointerEvents="none">
                   {g.sigla}
                 </SvgText>
               </G>

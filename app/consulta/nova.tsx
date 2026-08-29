@@ -26,7 +26,7 @@ export default function NovaConsulta() {
   async function salvar(v: ValoresConsulta) {
     const iso = isoDeDataHora(v.data, v.hora);
     if (!iso) return 'Data ou hora inválida.';
-    const { error } = await criarConsulta({
+    const { error, id } = await criarConsulta({
       paciente_id: v.paciente_id,
       inicio_em: iso,
       duracao_min: v.duracao_min,
@@ -34,7 +34,9 @@ export default function NovaConsulta() {
       observacoes: v.observacoes.trim() || null,
     });
     if (error) return error;
-    router.back();
+    // Leva direto pra consulta recém-criada em vez de só voltar em silêncio.
+    if (id) router.replace(`/consulta/${id}?nova=1`);
+    else router.back();
     return null;
   }
 
