@@ -108,7 +108,16 @@ export default function NovoExercicio() {
           itens={catalogo}
           keyItem={(e) => e.id}
           rotuloItem={(e) => e.titulo}
-          descricaoItem={(e) => e.instrucoes?.slice(0, 80) ?? null}
+          descricaoItem={(e) => {
+            const midia = [
+              e.video_url || e.video_path ? '🎬 vídeo' : null,
+              e.imagem_path ? '🖼 imagem' : null,
+            ]
+              .filter(Boolean)
+              .join(' · ');
+            const texto = e.instrucoes?.slice(0, 60);
+            return [texto, midia].filter(Boolean).join(' — ') || null;
+          }}
           idSelecionado={catalogoId}
           busca={busca}
           onBusca={setBusca}

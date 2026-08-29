@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -15,6 +16,7 @@ import { palette } from '@/constants/Colors';
 import { GRAUS_CLINICOS } from '@/.lib/scq';
 import { proximaConsulta, type Consulta } from '@/.lib/agenda';
 import { avisar } from '@/.lib/aviso';
+import { enviarDocumentoPorEmail } from '@/.lib/documentos';
 import { montarHtmlPrescricao, gerarECompartilharPDF } from '@/.lib/pdf';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { encerrarPrescricao, listarPrescricoes, type Prescricao } from '@/.lib/prescricoes';
@@ -22,7 +24,13 @@ import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
-type Paciente = { id: string; nome_completo: string; codigo_pseudonimo: string; user_id: string | null };
+type Paciente = {
+  id: string;
+  nome_completo: string;
+  codigo_pseudonimo: string;
+  email: string | null;
+  user_id: string | null;
+};
 type Lesao = {
   id: string;
   scq_percentual: number | null;
@@ -38,6 +46,7 @@ type Exercicio = {
   series: number | null;
   repeticoes: number | null;
   frequencia_semanal: number | null;
+  video_url: string | null;
   ativo: boolean;
 };
 type Adesao = { exercicio_id: string; execucoes_30d: number; adesao_percentual: number | null };
@@ -70,11 +79,15 @@ export default function DetalhePaciente() {
   const [criandoAcesso, setCriandoAcesso] = useState(false);
   const [senhaTemporaria, setSenhaTemporaria] = useState<string | null>(null);
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
-  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [prescAcao, setPrescAcao] = useState<'pdf' | 'email' | null>(null);
 
   const carregar = useCallback(async () => {
     const [{ data: p }, { data: l }, { data: e }, { data: a }, presc, prox] = await Promise.all([
-      supabase.from('pacientes').select('id, nome_completo, codigo_pseudonimo, user_id').eq('id', id).single(),
+      supabase
+        .from('pacientes')
+        .select('id, nome_completo, codigo_pseudonimo, email, user_id')
+        .eq('id', id)
+        .single(),
       supabase
         .from('lesoes')
         .select('id, scq_percentual, scq_tabela, grau_clinico, status, data_ocorrencia, regiao_corporal')
@@ -82,7 +95,7 @@ export default function DetalhePaciente() {
         .order('data_ocorrencia', { ascending: false }),
       supabase
         .from('exercicios_prescritos')
-        .select('id, titulo, series, repeticoes, frequencia_semanal, ativo')
+        .select('id, titulo, series, repeticoes, frequencia_semanal, video_url, ativo')
         .eq('paciente_id', id)
         .eq('ativo', true)
         .order('criado_em', { ascending: false }),
@@ -105,6 +118,11 @@ export default function DetalhePaciente() {
     }, [carregar])
   );
 
+  // Reaproveita o e-mail já cadastrado no paciente no campo de acesso ao portal.
+  useEffect(() => {
+    if (paciente?.email) setEmailPortal((atual) => atual || paciente.email!);
+  }, [paciente?.email]);
+
   async function criarAcessoPortal() {
     if (!emailPortal.trim()) {
       setErroAcesso('Informe o e-mail do paciente.');
@@ -123,15 +141,21 @@ export default function DetalhePaciente() {
       return;
     }
     setSenhaTemporaria(data.senha_temporaria);
+    // Guarda o e-mail também em pacientes.email (usado para enviar documentos).
+    supabase.from('pacientes').update({ email: emailPortal.trim() }).eq('id', id).then(() => {});
     carregar();
   }
 
-  async function gerarPdfPrescricoes() {
+  async function emitirPrescricao(destino: 'pdf' | 'email') {
     if (prescricoes.length === 0) {
-      avisar('Nenhuma prescrição ativa para gerar o PDF.');
+      avisar('Nenhuma prescrição ativa.');
       return;
     }
-    setGerandoPdf(true);
+    if (destino === 'email' && !paciente?.email) {
+      avisar('Cadastre o e-mail do paciente (seção “Acesso ao portal”) antes de enviar.');
+      return;
+    }
+    setPrescAcao(destino);
     try {
       const perfil = await obterPerfilProfissional();
       const { data: prof } = perfil
@@ -149,11 +173,20 @@ export default function DetalhePaciente() {
           observacoes: p.observacoes,
         })),
       });
-      await gerarECompartilharPDF(html);
+      if (destino === 'pdf') {
+        await gerarECompartilharPDF(html);
+      } else {
+        const { error } = await enviarDocumentoPorEmail({
+          pacienteId: id,
+          assunto: 'Sua prescrição — DermIA',
+          html,
+        });
+        avisar(error ?? 'Prescrição enviada por e-mail.', error ? 'erro' : 'ok');
+      }
     } catch (e) {
-      avisar(e instanceof Error ? e.message : 'Erro ao gerar o PDF.');
+      avisar(e instanceof Error ? e.message : 'Erro ao emitir a prescrição.');
     } finally {
-      setGerandoPdf(false);
+      setPrescAcao(null);
     }
   }
 
@@ -254,16 +287,34 @@ export default function DetalhePaciente() {
         </Pressable>
       </Link>
       {prescricoes.length > 0 && (
-        <Pressable
-          onPress={gerarPdfPrescricoes}
-          disabled={gerandoPdf}
-          className="bg-superficie border border-borda rounded-xl py-3 items-center mt-2">
-          {gerandoPdf ? (
-            <ActivityIndicator color={palette.primaria} />
-          ) : (
-            <Text className="text-texto font-semibold">Gerar PDF da prescrição</Text>
-          )}
-        </Pressable>
+        <View className="flex-row gap-2 mt-2">
+          <Pressable
+            onPress={() => emitirPrescricao('pdf')}
+            disabled={prescAcao !== null}
+            className="flex-1 bg-superficie border border-borda rounded-xl py-3 items-center">
+            {prescAcao === 'pdf' ? (
+              <ActivityIndicator color={palette.primaria} />
+            ) : (
+              <Text className="text-texto font-semibold text-xs">Gerar PDF</Text>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => emitirPrescricao('email')}
+            disabled={prescAcao !== null}
+            className="flex-1 bg-superficie border border-borda rounded-xl py-3 items-center"
+            style={{ opacity: paciente?.email ? 1 : 0.5 }}>
+            {prescAcao === 'email' ? (
+              <ActivityIndicator color={palette.primaria} />
+            ) : (
+              <Text className="text-texto font-semibold text-xs">Enviar por e-mail</Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+      {prescricoes.length > 0 && !paciente?.email && (
+        <Text className="text-secundario text-xs mt-1">
+          Para enviar por e-mail, cadastre o e-mail do paciente em “Acesso ao portal”.
+        </Text>
       )}
     </Secao>
   );
@@ -289,6 +340,13 @@ export default function DetalhePaciente() {
                     Adesão (30 dias): {adesao.adesao_percentual}% ({adesao.execucoes_30d} execuções)
                   </Text>
                 )}
+                {item.video_url ? (
+                  <Text
+                    onPress={() => Linking.openURL(item.video_url!)}
+                    className="text-primaria text-xs font-semibold mt-1">
+                    ▶ Ver vídeo
+                  </Text>
+                ) : null}
               </View>
             );
           })

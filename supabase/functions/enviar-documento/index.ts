@@ -1,8 +1,9 @@
-// Edge Function: envia um documento (PDF) por e-mail ao paciente via Resend.
-// Recebe { paciente_id, assunto, corpo, pdf_base64, nome_arquivo }.
+// Edge Function: envia um documento (prescrição, atestado ou relatório) por
+// e-mail ao paciente, via Resend. Recebe { paciente_id, assunto, html }.
 // Quem chama precisa enxergar o paciente (RLS com a sessão do usuário).
 // O "de" é o remetente verificado do app (uma conta Resend só, não uma por
-// fisioterapeuta); o "para" é `pacientes.email`.
+// fisioterapeuta); o "para" é `pacientes.email`. O corpo do e-mail é o próprio
+// HTML do documento (sem anexo PDF — evita dependência de conversão).
 //
 // Secrets necessários:
 //   supabase secrets set RESEND_API_KEY=...
@@ -28,12 +29,11 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Sessão inválida.' }), { status: 401 });
   }
 
-  const { paciente_id, assunto, corpo, pdf_base64, nome_arquivo } = await req.json();
-  if (!paciente_id || !pdf_base64) {
-    return new Response(
-      JSON.stringify({ error: 'paciente_id e pdf_base64 são obrigatórios.' }),
-      { status: 400 }
-    );
+  const { paciente_id, assunto, html } = await req.json();
+  if (!paciente_id || !html) {
+    return new Response(JSON.stringify({ error: 'paciente_id e html são obrigatórios.' }), {
+      status: 400,
+    });
   }
 
   const { data: paciente, error: erroPaciente } = await supabaseUsuario
@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
   const remetente = Deno.env.get('EMAIL_REMETENTE');
   if (!apiKey || !remetente) {
     return new Response(
-      JSON.stringify({ error: 'Envio de e-mail não configurado (RESEND_API_KEY / EMAIL_REMETENTE).' }),
+      JSON.stringify({
+        error: 'Envio de e-mail ainda não configurado (RESEND_API_KEY / EMAIL_REMETENTE).',
+      }),
       { status: 503 }
     );
   }
@@ -72,15 +74,7 @@ Deno.serve(async (req) => {
       from: remetente,
       to: [paciente.email],
       subject: assunto || 'Documento do seu acompanhamento — DermIA',
-      text:
-        corpo ||
-        `Olá, ${paciente.nome_completo ?? ''}.\n\nSegue em anexo o documento do seu acompanhamento.\n\nDermIA`,
-      attachments: [
-        {
-          filename: nome_arquivo || 'documento.pdf',
-          content: pdf_base64,
-        },
-      ],
+      html,
     }),
   });
 

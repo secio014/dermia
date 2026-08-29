@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
+import { enviarDocumentoPorEmail } from '@/.lib/documentos';
 import { montarHtmlAtestado, gerarECompartilharPDF } from '@/.lib/pdf';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { useTema } from '@/.lib/tema';
@@ -19,12 +20,12 @@ export default function NovoAtestado() {
   const [fim, setFim] = useState('');
   const [cid, setCid] = useState('');
   const [finalidade, setFinalidade] = useState('');
-  const [gerando, setGerando] = useState(false);
+  const [acao, setAcao] = useState<'pdf' | 'email' | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
-  async function gerar() {
+  async function emitir(destino: 'pdf' | 'email') {
     setErro(null);
-    setGerando(true);
+    setAcao(destino);
     try {
       const perfil = await obterPerfilProfissional();
       const [{ data: prof }, { data: pac }] = await Promise.all([
@@ -33,10 +34,15 @@ export default function NovoAtestado() {
           : Promise.resolve({ data: null }),
         supabase
           .from('pacientes')
-          .select('nome_completo, codigo_pseudonimo')
+          .select('nome_completo, codigo_pseudonimo, email')
           .eq('id', id)
           .single(),
       ]);
+
+      if (destino === 'email' && !pac?.email) {
+        setErro('Este paciente não tem e-mail cadastrado.');
+        return;
+      }
 
       const html = montarHtmlAtestado({
         profissional: { nome: prof?.nome ?? null, registro: prof?.registro ?? null },
@@ -48,17 +54,27 @@ export default function NovoAtestado() {
         cid: cid.trim() || null,
         finalidade: finalidade.trim() || null,
       });
-      await gerarECompartilharPDF(html);
+
+      if (destino === 'pdf') {
+        await gerarECompartilharPDF(html);
+      } else {
+        const { error } = await enviarDocumentoPorEmail({
+          pacienteId: id,
+          assunto: 'Seu atestado — DermIA',
+          html,
+        });
+        if (error) setErro(error);
+      }
     } catch (e) {
       const msg =
         e instanceof Error
           ? e.message
           : typeof e === 'object' && e !== null && 'message' in e
             ? String((e as { message: unknown }).message)
-            : 'Erro ao gerar o atestado.';
+            : 'Erro ao emitir o atestado.';
       setErro(msg);
     } finally {
-      setGerando(false);
+      setAcao(null);
     }
   }
 
@@ -130,18 +146,30 @@ export default function NovoAtestado() {
       {erro && <Text className="text-risco mb-3">{erro}</Text>}
 
       <Pressable
-        onPress={gerar}
-        disabled={gerando}
+        onPress={() => emitir('pdf')}
+        disabled={acao !== null}
         className="bg-primaria rounded-xl py-3.5 items-center">
-        {gerando ? (
+        {acao === 'pdf' ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <Text className="text-white font-semibold">Gerar atestado em PDF</Text>
         )}
       </Pressable>
 
+      <Pressable
+        onPress={() => emitir('email')}
+        disabled={acao !== null}
+        className="bg-superficie border border-borda rounded-xl py-3.5 items-center mt-2">
+        {acao === 'email' ? (
+          <ActivityIndicator color={cores.primaria} />
+        ) : (
+          <Text className="text-texto font-semibold">Enviar por e-mail ao paciente</Text>
+        )}
+      </Pressable>
+
       <Text className="text-secundario text-xs mt-3 text-center">
-        O envio por e-mail ao paciente será liberado quando o Resend estiver configurado.
+        O e-mail usa o endereço cadastrado no paciente e só funciona depois que o
+        Resend estiver configurado (edge function publicada).
       </Text>
     </ScrollView>
   );

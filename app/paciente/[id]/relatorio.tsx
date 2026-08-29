@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 're
 
 import SeletorData from '@/components/ui/SeletorData';
 import { palette } from '@/constants/Colors';
+import { enviarDocumentoPorEmail } from '@/.lib/documentos';
 import { obterUrlAssinada } from '@/.lib/foto';
 import {
   gerarECompartilharPDF,
@@ -19,6 +20,7 @@ export default function RelatorioPaciente() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [incluirFotos, setIncluirFotos] = useState(true);
+  const [porEmail, setPorEmail] = useState(false);
   const [gerando, setGerando] = useState<'evolucao' | 'alta' | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -28,9 +30,14 @@ export default function RelatorioPaciente() {
     try {
       const { data: paciente } = await supabase
         .from('pacientes')
-        .select('nome_completo, codigo_pseudonimo')
+        .select('nome_completo, codigo_pseudonimo, email')
         .eq('id', id)
         .single();
+
+      if (porEmail && !paciente?.email) {
+        setErro('Este paciente não tem e-mail cadastrado.');
+        return;
+      }
 
       let consultaLesoes = supabase
         .from('lesoes')
@@ -81,7 +88,16 @@ export default function RelatorioPaciente() {
         fotos,
       });
 
-      await gerarECompartilharPDF(html);
+      if (porEmail) {
+        const { error } = await enviarDocumentoPorEmail({
+          pacienteId: id,
+          assunto: 'Seu relatório de acompanhamento — DermIA',
+          html,
+        });
+        if (error) setErro(error);
+      } else {
+        await gerarECompartilharPDF(html);
+      }
     } catch (e) {
       const mensagem =
         e instanceof Error
@@ -113,9 +129,14 @@ export default function RelatorioPaciente() {
         </View>
       </View>
 
-      <View className="flex-row items-center justify-between bg-superficie border border-borda rounded-xl px-4 py-3 mb-6">
+      <View className="flex-row items-center justify-between bg-superficie border border-borda rounded-xl px-4 py-3 mb-3">
         <Text className="text-texto">Incluir fotos</Text>
         <Switch value={incluirFotos} onValueChange={setIncluirFotos} />
+      </View>
+
+      <View className="flex-row items-center justify-between bg-superficie border border-borda rounded-xl px-4 py-3 mb-6">
+        <Text className="text-texto">Enviar por e-mail ao paciente</Text>
+        <Switch value={porEmail} onValueChange={setPorEmail} />
       </View>
 
       {erro && <Text className="text-risco mb-3">{erro}</Text>}
@@ -127,7 +148,9 @@ export default function RelatorioPaciente() {
         {gerando === 'evolucao' ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text className="text-superficie font-semibold">Gerar relatório de evolução</Text>
+          <Text className="text-superficie font-semibold">
+            {porEmail ? 'Enviar relatório de evolução' : 'Gerar relatório de evolução'}
+          </Text>
         )}
       </Pressable>
 
@@ -138,7 +161,9 @@ export default function RelatorioPaciente() {
         {gerando === 'alta' ? (
           <ActivityIndicator color={palette.primaria} />
         ) : (
-          <Text className="text-texto font-semibold">Gerar relatório de alta</Text>
+          <Text className="text-texto font-semibold">
+            {porEmail ? 'Enviar relatório de alta' : 'Gerar relatório de alta'}
+          </Text>
         )}
       </Pressable>
     </ScrollView>
