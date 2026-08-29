@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+*.tgz
 
 # Expo
 .expo/
@@ -13,26 +14,45 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
 
+# EAS / store credentials (NUNCA versionar)
+credentials.json
+google-services.json
+GoogleService-Info.plist
+
 # Metro
 .metro-health-check*
 
-# debug
+# debug / logs
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
+logs/
+
+# testes
+coverage/
 
 # macOS
 .DS_Store
 *.pem
 
-# local env files
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# local env files (segredos: Supabase keys, service_role, etc.)
 .env
-.env*.local
+.env.*
+!.env.example
+!.env.sample
 
 # typescript
 *.tsbuildinfo
@@ -43,10 +63,17 @@ yarn-error.*
 
 # Supabase CLI local cache
 supabase/.temp/
+supabase/.branches/
+supabase/functions/**/.env
 
-# Backups do banco (contêm dados de pacientes — LGPD, nunca versionar)
-backups/
+# Netlify (estado local do deploy)
+.netlify/
+
+# Scripts com dados reais (clínica/credenciais) — manter só o template
+scripts/onboarding-clinica.local.sql
+scripts/*.local.sql
 
 # editors
 .claude/
 .vscode/
+.idea/

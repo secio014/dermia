@@ -87,7 +87,8 @@ Definir isso **antes da 2ª clínica** — trocar de modelo depois é migração
 - [ ] **Região dos dados** — projeto Supabase em região do Brasil (`sa-east-1`) se
       for requisito da clínica.
 - [ ] **Backup** — cópias contêm dados sensíveis; criptografar em repouso e
-      controlar acesso (ver `PROXIMOS_PASSOS.md` seção 2).
+      controlar acesso. No plano grátis não há PITR — usar `pg_dump` manual ou
+      migrar para o plano Pro antes de dados reais.
 
 ---
 

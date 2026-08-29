@@ -1,112 +1,30 @@
 # DermIA — Próximos passos (ações do Pedro)
 
-Tudo que está pendente e depende de você (contas, instalações, infra, decisões).
-Ordenado por prioridade. O que era código já foi feito nesta rodada — ver o fim
-do arquivo.
+Tudo que está pendente e depende de você (contas, infra, decisões).
+Ordenado por prioridade. O que era código já foi feito — ver o fim do arquivo.
 
 ---
 
-## 1. Commitar o trabalho pendente
+## 1. Enviar as tags (opcional)
 
-O working tree tem mudanças não commitadas desta sessão:
-
-- `scripts/backup.mjs` (novo)
-- `.gitignore` (ignora `backups/`)
-- `docs/PROXIMOS_PASSOS.md` e `docs/PLANO_ROLLOUT.md` (novos)
-- 5 tags anotadas locais: `v1.0-foundation` … `v5.0-production`
-
-```bash
-git add -A
-git commit -m "chore: script de backup, plano de rollout e checklist de proximos passos"
-```
-
-As tags **não** vão junto no `git push` normal. Para enviá-las:
+As 5 tags anotadas (`v1.0-foundation` … `v5.0-production`) são locais. O `git push`
+normal não leva tags junto. Para enviá-las:
 
 ```bash
 git push origin master
 git push origin --tags
 ```
 
-(Enviar as tags é opcional — servem de marco histórico. Se o repo é só local, pode pular.)
+Servem só de marco histórico. Se o repo é só local, pode pular.
 
 ---
 
-## 2. Backup do banco funcionando (plano grátis não tem backup automático)
+## 2. Verificar RLS no dashboard — ✅ FEITO (2026-08-28)
 
-O script `scripts/backup.mjs` já está pronto, mas precisa de duas coisas suas.
+Rodado `scripts/verificar-rls.sql`: as 10 tabelas do `public` têm RLS ativo e
+policies (queries 1 e 2 sem linhas). Reexecutar só se criar tabela nova.
 
-### 2.1. Instalar o `pg_dump`
-
-```powershell
-winget install -e --id PostgreSQL.PostgreSQL.17
-```
-
-Depois adicione ao **PATH do Windows** (Painel de Controle → Editar variáveis de
-ambiente do sistema → Path → Novo):
-
-```
-C:\Program Files\PostgreSQL\17\bin
-```
-
-Feche e reabra o terminal. Confirme:
-
-```powershell
-pg_dump --version    # deve imprimir "pg_dump (PostgreSQL) 17.x"
-```
-
-> A versão do `pg_dump` precisa ser **>= a do servidor Supabase**. O 17 cobre hoje.
-
-### 2.2. Pôr a senha do banco no `.env`
-
-Pegue em: **Supabase Dashboard → Project Settings → Database → Database password**
-(se não lembra, clique em *Reset database password* — isso não afeta a `anon key`
-do app).
-
-Adicione a linha no `.env` da raiz:
-
-```
-SUPABASE_DB_PASSWORD=a-senha-aqui
-```
-
-(o `.env` já está no `.gitignore`)
-
-### 2.3. Rodar
-
-```bash
-node scripts/backup.mjs
-```
-
-Gera `backups/AAAA-MM-DD_HHMM/` com `roles.sql`, `schema.sql`, `data.sql`.
-Mantém os 10 mais recentes (`--manter=20` para mudar).
-
-### 2.4. Agendar (recomendado: 1x/semana durante o piloto)
-
-Task Scheduler do Windows:
-
-1. `Win` → "Agendador de Tarefas" → *Criar Tarefa Básica*
-2. Nome: `DermIA backup semanal`
-3. Disparo: Semanal, escolha o dia/hora (ex.: domingo 20h)
-4. Ação: *Iniciar um programa*
-   - Programa: `node`
-   - Argumentos: `scripts/backup.mjs`
-   - Iniciar em: `C:\Users\pedro\Documents\Repos\dermia`
-5. Concluir.
-
-Guarde uma cópia da pasta `backups/` fora da máquina (OneDrive/Google Drive/pen drive).
-Ela **contém dados de pacientes** — trate como material sigiloso (LGPD).
-
-### 2.5. Restaurar (se precisar)
-
-```bash
-psql "postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres" -f backups/<data>/schema.sql
-psql "postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres" -f backups/<data>/data.sql
-```
-
----
-
-## 3. Verificar RLS no dashboard
-
-Não dá para verificar isso pelo código. No **SQL Editor do Supabase**, rode:
+Referência — as queries que o arquivo roda:
 
 ```sql
 -- Tabelas SEM RLS ativo (o resultado ideal é nenhuma linha)
@@ -135,7 +53,7 @@ alter table public.<tabela> enable row level security;
 
 ---
 
-## 4. Decisão: IA real (Ollama) ou validação manual?
+## 3. Decisão: IA real (Ollama) ou validação manual?
 
 Hoje **toda análise de IA cai em `status: erro`** porque a Edge Function
 `analisar-lesao` não tem host de Ollama configurado. O app não quebra — a
@@ -166,22 +84,21 @@ entra numa fase seguinte.
 
 ---
 
-## 5. Reativar login real (bloqueante para produção / multi-profissional)
+## 4. Reativar login real (bloqueante para produção / multi-profissional)
 
 Hoje o app entra sozinho como `teste@dermia.local` fixo
 (`LOGIN_DESATIVADO = true` em `.lib/dev.ts`). Enquanto isso, **não existe mais de
 um profissional** e o isolamento RLS entre profissionais nunca é exercido.
 
-### 5.1. Criar os profissionais reais no Supabase
+### 4.1. Criar os profissionais reais no Supabase
 
-Use o SQL da seção 2 do `docs/GUIA_ADMINISTRADOR.md` (cria clínica + `auth.users` +
-`profissionais`). **Cuidado com as colunas de token em `auth.users` — precisam ser
-`''`, nunca `NULL`** (também explicado no guia).
+Abra `scripts/onboarding-clinica.sql`, preencha os valores em `<...>` no topo do
+bloco `do $$` (nome da clínica, nomes/emails/senhas do admin e do fisioterapeuta)
+e rode no SQL Editor do Supabase. Ele já cria clínica + `auth.users` (com as
+colunas de token em `''`, nunca `NULL`) + `profissionais`, com 1 admin + 1
+fisioterapeuta comum — o mínimo para testar o isolamento.
 
-Crie pelo menos: 1 admin + 1 fisioterapeuta comum, para conseguir testar o
-isolamento.
-
-### 5.2. Ligar a tela de login
+### 4.2. Ligar a tela de login
 
 Edite `.lib/dev.ts`:
 
@@ -193,22 +110,23 @@ Só isso já faz `app/_layout.tsx` voltar a renderizar `<Auth />` quando não h�
 sessão, e `.lib/useSessao.ts` para de logar sozinho. (Limpeza opcional depois:
 apagar `.lib/dev.ts` e remover os `import`/guards em `_layout.tsx` e `useSessao.ts`.)
 
-### 5.3. Testar
+### 4.3. Testar
 
 - Abrir o app → aparece a tela de login.
 - Logar como fisioterapeuta A, criar um paciente.
 - Deslogar, logar como fisioterapeuta B → **não** pode ver o paciente de A.
 - Logar como admin → vê os dois (painel de admin).
 
-### 5.4. Atualizar os scripts
+### 4.4. Atualizar os scripts
 
-`scripts/seed-piloto.mjs` e `scripts/limpar-seed.mjs` logam com o profissional de
-teste hardcoded. Depois de reativar o login, ou você mantém esse usuário de teste
-só para os scripts, ou ajusta os scripts para receberem credenciais via env.
+`scripts/seed-piloto.mjs` e `scripts/limpar-seed.mjs` agora aceitam credenciais
+via env — `SEED_EMAIL=... SEED_SENHA=... node scripts/seed-piloto.mjs` — com
+fallback para `teste@dermia.local`. Depois de reativar o login real, use as
+credenciais de um profissional real ou mantenha o usuário de teste só para eles.
 
 ---
 
-## 6. Escolher o alvo de deploy do piloto
+## 5. Escolher o alvo de deploy do piloto
 
 Três caminhos. Para um piloto em clínica, **recomendo a web estática** (mais rápido,
 grátis, sem loja de apps).
@@ -223,51 +141,53 @@ Clínica instala o app **Expo Go** no celular e escaneia o QR. Limitação: prec
 sua máquina rodando o servidor na mesma rede / com túnel. Bom só para demo, não
 para uso diário.
 
-### Opção B — Web estática (recomendado)
+### Opção B — Web estática (recomendado) — ✅ NO AR
+
+Publicado no Netlify: **https://deft-capybara-a49de4.netlify.app/**
+(SPA fallback OK — rota profunda responde 200). Para atualizar: rodar o
+`expo export` de novo e re-arrastar `dist/` em app.netlify.com/drop (ou conectar
+o repo pra deploy automático).
 
 ```bash
 npx expo export --platform web    # gera a pasta dist/
 ```
 
-Depois publique `dist/` num host grátis com HTTPS:
+A pasta `dist/` **já foi gerada** (25 rotas, bundle ~2.6 MB) e já inclui um
+`_redirects` (SPA fallback pra rotas dinâmicas não darem 404 no refresh). Para
+regerar depois de mudanças no código, rode o comando de novo. Depois publique
+`dist/` num host grátis com HTTPS:
 
-- **Cloudflare Pages** ou **Netlify** ou **Vercel** — todos têm plano grátis, todos
-  dão HTTPS automático.
-- Fluxo mais simples: criar conta no Netlify → *Add new site* → *Deploy manually* →
-  arrastar a pasta `dist/`.
-- Para re-deploy, roda o `expo export` de novo e arrasta de novo (ou conecta o
-  repo para deploy automático).
+- **Netlify** (recomendado) → [app.netlify.com/drop](https://app.netlify.com/drop),
+  arrasta a pasta `dist/`. Re-deploy = arrastar de novo.
+- **Cloudflare Pages** → Direct Upload. Mesma ideia, lê o mesmo `_redirects`.
+- **Vercel** → melhor se conectar o repo pra deploy automático a cada push.
 
 A clínica acessa por um link no navegador (desktop ou tablet). Câmera funciona no
 navegador via HTTPS.
 
-### Opção C — App nativo via EAS Build
+### Opção C — App Android via EAS Build
 
-Só se precisar mesmo de app instalado (push notifications nativas, uso offline
-pesado, etc.). Passos:
+`app.json` já tem `android.package` / `ios.bundleIdentifier` = `com.dermia.app` e
+`eas.json` já tem o profile `preview` (APK, distribuição interna). Falta:
 
-1. `npm i -g eas-cli && eas login` (precisa de conta Expo — grátis)
-2. `eas init` — cria o `projectId` e preenche `owner` no `app.json`
-3. Adicionar identificadores no `app.json` (dentro de `expo`):
-   ```json
-   "ios": { "supportsTablet": true, "bundleIdentifier": "com.SEUDOMINIO.dermia" },
-   "android": { "package": "com.SEUDOMINIO.dermia", ... }
-   ```
-   Use um domínio que você controla; **trocar isso depois de publicar na loja é
-   doloroso**.
-4. `eas build -p android --profile preview` → gera um `.apk` para instalar direto.
-5. iOS exige conta Apple Developer (US$ 99/ano) e distribuição via TestFlight.
-6. Plano grátis do EAS: ~30 builds/mês — suficiente para um piloto.
+1. `npm i -g eas-cli && eas login` (conta Expo — grátis)
+2. `eas init` — cria o `projectId` e preenche `owner`/`extra.eas.projectId` no `app.json`
+3. `eas build -p android --profile preview` → no fim, um link/QR de instalação. A
+   clínica abre no celular Android e instala (precisa permitir "fontes desconhecidas").
+4. Update: `eas build` de novo, manda o link novo. (Ou Firebase App Distribution
+   grátis, se quiser controlar por e-mail e notificar updates.)
+5. Play Store só se virar produto: conta de dev US$ 25 (única), faixa de Teste Interno.
+6. iOS exige conta Apple Developer (US$ 99/ano) + TestFlight — fora do escopo do piloto.
+7. Plano grátis do EAS: ~30 builds/mês — sobra pro piloto.
 
 ---
 
-## 7. Checklist final de LGPD / segurança (antes do piloto)
+## 6. Checklist final de LGPD / segurança (antes do piloto)
 
-- [ ] RLS confirmado em todas as tabelas (seção 3)
-- [ ] Backup rodando e testado, cópia fora da máquina (seção 2)
-- [ ] Login real ativado, sem usuário de teste com acesso a dados reais (seção 5)
+- [x] RLS confirmado em todas as tabelas (seção 2)
+- [ ] Login real ativado, sem usuário de teste com acesso a dados reais (seção 4)
 - [ ] `.env` nunca commitado — OK, já está no `.gitignore`
-- [ ] HTTPS no alvo de deploy — OK em qualquer host da Opção B/C
+- [x] HTTPS no alvo de deploy — Netlify (web) já com HTTPS automático
 - [ ] Consentimento LGPD sendo coletado no cadastro do paciente — já é obrigatório
       no fluxo (trigger no banco bloqueia foto sem `consentimento_em`)
 - [ ] Termo/contrato de tratamento de dados assinado com a clínica parceira
@@ -278,11 +198,27 @@ pesado, etc.). Passos:
 
 ---
 
-## Feito nesta rodada (código, já no working tree)
+## Feito (código, já no working tree)
 
 - 5 tags anotadas `v1.0-foundation` … `v5.0-production` mapeadas aos commits certos
-- `scripts/backup.mjs` — dump `roles`/`schema`/`data` via Supabase CLI, poda os
-  antigos, preflight de `pg_dump`, senha via env var (corrigido o `EINVAL` do Windows)
-- `.gitignore` — ignora `backups/`
 - `docs/PLANO_ROLLOUT.md` — modelo para expandir para outras clínicas
+- `scripts/verificar-rls.sql` — auditoria de RLS pronta pra colar no SQL Editor (seção 2)
+- `scripts/onboarding-clinica.sql` — cria clínica + admin + fisioterapeuta, tokens
+  em `''`, só preencher os `<...>` (seção 4.1)
+- `scripts/seed-piloto.mjs` / `scripts/limpar-seed.mjs` — aceitam `SEED_EMAIL` /
+  `SEED_SENHA` via env, fallback pro usuário de teste (seção 4.4)
+- `dist/` — build web estático gerado (`npx expo export --platform web`) com
+  `public/_redirects` (SPA fallback), pronto pra arrastar num host (seção 5, Opção B)
+- `app.json` — `android.package` + `ios.bundleIdentifier` = `com.dermia.app`
+- `eas.json` — profile `preview` (APK, distribuição interna) e `production`
+- RLS verificado no dashboard (seção 2)
 - este arquivo
+
+### Continua dependendo só de você (não dá pra automatizar aqui)
+
+1. Decidir IA real vs. validação manual (seção 3) — recomendação: manual no piloto
+2. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
+   `LOGIN_DESATIVADO = false` em `.lib/dev.ts` e testar o isolamento (seção 4)
+3. `eas login` / `eas init` / `eas build -p android --profile preview` pro APK
+   (seção 5, Opção C) — web já publicada no Netlify
+4. Termo de tratamento de dados com a clínica + checklist LGPD (seção 6)
