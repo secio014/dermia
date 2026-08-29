@@ -19,11 +19,12 @@ Servem só de marco histórico. Se o repo é só local, pode pular.
 
 ---
 
-## 2. Verificar RLS no dashboard
+## 2. Verificar RLS no dashboard — ✅ FEITO (2026-08-28)
 
-Não dá para verificar isso pelo código. Abra `scripts/verificar-rls.sql` e cole o
-conteúdo inteiro no **SQL Editor do Supabase** (não altera nada, só relata). Ele
-roda as queries abaixo:
+Rodado `scripts/verificar-rls.sql`: as 10 tabelas do `public` têm RLS ativo e
+policies (queries 1 e 2 sem linhas). Reexecutar só se criar tabela nova.
+
+Referência — as queries que o arquivo roda:
 
 ```sql
 -- Tabelas SEM RLS ativo (o resultado ideal é nenhuma linha)
@@ -146,43 +147,39 @@ para uso diário.
 npx expo export --platform web    # gera a pasta dist/
 ```
 
-A pasta `dist/` **já foi gerada** (25 rotas, bundle ~2.6 MB). Para regerar depois
-de mudanças no código, rode o comando de novo. Depois publique `dist/` num host
-grátis com HTTPS:
+A pasta `dist/` **já foi gerada** (25 rotas, bundle ~2.6 MB) e já inclui um
+`_redirects` (SPA fallback pra rotas dinâmicas não darem 404 no refresh). Para
+regerar depois de mudanças no código, rode o comando de novo. Depois publique
+`dist/` num host grátis com HTTPS:
 
-- **Cloudflare Pages** ou **Netlify** ou **Vercel** — todos têm plano grátis, todos
-  dão HTTPS automático.
-- Fluxo mais simples: criar conta no Netlify → *Add new site* → *Deploy manually* →
-  arrastar a pasta `dist/`.
-- Para re-deploy, roda o `expo export` de novo e arrasta de novo (ou conecta o
-  repo para deploy automático).
+- **Netlify** (recomendado) → [app.netlify.com/drop](https://app.netlify.com/drop),
+  arrasta a pasta `dist/`. Re-deploy = arrastar de novo.
+- **Cloudflare Pages** → Direct Upload. Mesma ideia, lê o mesmo `_redirects`.
+- **Vercel** → melhor se conectar o repo pra deploy automático a cada push.
 
 A clínica acessa por um link no navegador (desktop ou tablet). Câmera funciona no
 navegador via HTTPS.
 
-### Opção C — App nativo via EAS Build
+### Opção C — App Android via EAS Build
 
-Só se precisar mesmo de app instalado (push notifications nativas, uso offline
-pesado, etc.). Passos:
+`app.json` já tem `android.package` / `ios.bundleIdentifier` = `com.dermia.app` e
+`eas.json` já tem o profile `preview` (APK, distribuição interna). Falta:
 
-1. `npm i -g eas-cli && eas login` (precisa de conta Expo — grátis)
-2. `eas init` — cria o `projectId` e preenche `owner` no `app.json`
-3. Adicionar identificadores no `app.json` (dentro de `expo`):
-   ```json
-   "ios": { "supportsTablet": true, "bundleIdentifier": "com.SEUDOMINIO.dermia" },
-   "android": { "package": "com.SEUDOMINIO.dermia", ... }
-   ```
-   Use um domínio que você controla; **trocar isso depois de publicar na loja é
-   doloroso**.
-4. `eas build -p android --profile preview` → gera um `.apk` para instalar direto.
-5. iOS exige conta Apple Developer (US$ 99/ano) e distribuição via TestFlight.
-6. Plano grátis do EAS: ~30 builds/mês — suficiente para um piloto.
+1. `npm i -g eas-cli && eas login` (conta Expo — grátis)
+2. `eas init` — cria o `projectId` e preenche `owner`/`extra.eas.projectId` no `app.json`
+3. `eas build -p android --profile preview` → no fim, um link/QR de instalação. A
+   clínica abre no celular Android e instala (precisa permitir "fontes desconhecidas").
+4. Update: `eas build` de novo, manda o link novo. (Ou Firebase App Distribution
+   grátis, se quiser controlar por e-mail e notificar updates.)
+5. Play Store só se virar produto: conta de dev US$ 25 (única), faixa de Teste Interno.
+6. iOS exige conta Apple Developer (US$ 99/ano) + TestFlight — fora do escopo do piloto.
+7. Plano grátis do EAS: ~30 builds/mês — sobra pro piloto.
 
 ---
 
 ## 6. Checklist final de LGPD / segurança (antes do piloto)
 
-- [ ] RLS confirmado em todas as tabelas (seção 2)
+- [x] RLS confirmado em todas as tabelas (seção 2)
 - [ ] Login real ativado, sem usuário de teste com acesso a dados reais (seção 4)
 - [ ] `.env` nunca commitado — OK, já está no `.gitignore`
 - [ ] HTTPS no alvo de deploy — OK em qualquer host da Opção B/C
@@ -205,15 +202,18 @@ pesado, etc.). Passos:
   em `''`, só preencher os `<...>` (seção 4.1)
 - `scripts/seed-piloto.mjs` / `scripts/limpar-seed.mjs` — aceitam `SEED_EMAIL` /
   `SEED_SENHA` via env, fallback pro usuário de teste (seção 4.4)
-- `dist/` — build web estático gerado (`npx expo export --platform web`), pronto
-  pra arrastar num host (seção 5, Opção B)
+- `dist/` — build web estático gerado (`npx expo export --platform web`) com
+  `public/_redirects` (SPA fallback), pronto pra arrastar num host (seção 5, Opção B)
+- `app.json` — `android.package` + `ios.bundleIdentifier` = `com.dermia.app`
+- `eas.json` — profile `preview` (APK, distribuição interna) e `production`
+- RLS verificado no dashboard (seção 2)
 - este arquivo
 
 ### Continua dependendo só de você (não dá pra automatizar aqui)
 
-1. Colar `scripts/verificar-rls.sql` no dashboard e corrigir o que aparecer (seção 2)
-2. Decidir IA real vs. validação manual (seção 3) — recomendação: manual no piloto
-3. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
+1. Decidir IA real vs. validação manual (seção 3) — recomendação: manual no piloto
+2. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
    `LOGIN_DESATIVADO = false` em `.lib/dev.ts` e testar o isolamento (seção 4)
-4. Criar conta num host (Netlify/Cloudflare/Vercel) e publicar `dist/` (seção 5)
-5. Termo de tratamento de dados com a clínica + checklist LGPD (seção 6)
+3. Publicar `dist/` no Netlify (seção 5, Opção B) + `eas login` / `eas init` /
+   `eas build -p android --profile preview` pro APK (seção 5, Opção C)
+4. Termo de tratamento de dados com a clínica + checklist LGPD (seção 6)

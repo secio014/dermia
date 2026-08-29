@@ -1,0 +1,4 @@
+# SPA fallback para Netlify / Cloudflare Pages.
+# Arquivos existentes (HTML por rota, assets em _expo/) são servidos primeiro;
+# só o que não casar cai no index.html pra o expo-router resolver no cliente.
+/*    /index.html    200
