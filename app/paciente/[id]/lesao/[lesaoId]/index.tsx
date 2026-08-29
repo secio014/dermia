@@ -3,8 +3,10 @@ import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvolucao';
+import { palette } from '@/constants/Colors';
 import GraficoVancouver, { type PontoVancouver } from '@/components/GraficoVancouver';
 import { obterUrlAssinada } from '@/.lib/foto';
+import { useLargo } from '@/.lib/responsivo';
 import { supabase } from '@/.lib/supabase';
 import { totalVancouver, type EscalaCicatriz } from '@/.lib/vancouver';
 
@@ -35,6 +37,7 @@ type Registro = {
 
 export default function EvolucaoLesao() {
   const { id, lesaoId } = useLocalSearchParams<{ id: string; lesaoId: string }>();
+  const largo = useLargo();
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [filtro, setFiltro] = useState<string | null>(null);
@@ -111,46 +114,13 @@ export default function EvolucaoLesao() {
   if (carregando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }
 
-  return (
-    <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Text className="text-texto text-lg font-bold mb-3">Evolução da lesão</Text>
-
-      <Text className="text-texto font-semibold mb-2">Fotos</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-        <Link href={`/paciente/${id}/lesao/${lesaoId}/foto/nova`} asChild>
-          <Pressable className="w-24 h-24 mr-3 rounded-xl border border-dashed border-borda items-center justify-center bg-superficie">
-            <Text className="text-primaria text-xs font-semibold text-center">+ Nova{'\n'}foto</Text>
-          </Pressable>
-        </Link>
-        {analises.map((a) => (
-          <Pressable
-            key={a.id}
-            onPress={() => router.push(`/paciente/${id}/lesao/${lesaoId}/foto/${a.id}`)}
-            className="w-24 h-24 mr-3 rounded-xl overflow-hidden bg-superficie border border-borda">
-            {a.urlAssinada ? (
-              <Image source={{ uri: a.urlAssinada }} style={{ width: '100%', height: '100%' }} />
-            ) : (
-              <View className="flex-1 items-center justify-center">
-                <ActivityIndicator color="#0E5FD8" size="small" />
-              </View>
-            )}
-          </Pressable>
-        ))}
-      </ScrollView>
-
-      {analises.length >= 2 && (
-        <Link href={`/paciente/${id}/lesao/${lesaoId}/comparar`} asChild>
-          <Pressable className="bg-superficie border border-primaria rounded-xl py-2.5 items-center mb-4">
-            <Text className="text-primaria font-semibold text-xs">Comparar fotos ao longo do tempo</Text>
-          </Pressable>
-        </Link>
-      )}
-
+  const blocoGraficos = (
+    <>
       <Text className="text-texto font-semibold mb-2">Cicatriz (Vancouver)</Text>
       <View className="mb-4">
         <GraficoVancouver pontos={pontosVancouver} />
@@ -174,8 +144,12 @@ export default function EvolucaoLesao() {
       )}
 
       <GraficoEvolucao pontos={pontos} />
+    </>
+  );
 
-      <Text className="text-texto font-semibold mt-6 mb-2">Registros</Text>
+  const blocoRegistros = (
+    <>
+      <Text className="text-texto font-semibold mb-2">Registros</Text>
       {registros.length === 0 ? (
         <Text className="text-secundario mb-4">Nenhum registro de evolução ainda.</Text>
       ) : (
@@ -205,6 +179,59 @@ export default function EvolucaoLesao() {
           <Text className="text-superficie font-semibold">+ Novo registro</Text>
         </Pressable>
       </Link>
+    </>
+  );
+
+  return (
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
+      contentContainerStyle={{ paddingBottom: 32 }}>
+      <Text className="text-texto text-lg font-bold mb-3">Evolução da lesão</Text>
+
+      <Text className="text-texto font-semibold mb-2">Fotos</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+        <Link href={`/paciente/${id}/lesao/${lesaoId}/foto/nova`} asChild>
+          <Pressable className="w-24 h-24 mr-3 rounded-xl border border-dashed border-borda items-center justify-center bg-superficie">
+            <Text className="text-primaria text-xs font-semibold text-center">+ Nova{'\n'}foto</Text>
+          </Pressable>
+        </Link>
+        {analises.map((a) => (
+          <Pressable
+            key={a.id}
+            onPress={() => router.push(`/paciente/${id}/lesao/${lesaoId}/foto/${a.id}`)}
+            className="w-24 h-24 mr-3 rounded-xl overflow-hidden bg-superficie border border-borda">
+            {a.urlAssinada ? (
+              <Image source={{ uri: a.urlAssinada }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator color={palette.primaria} size="small" />
+              </View>
+            )}
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {analises.length >= 2 && (
+        <Link href={`/paciente/${id}/lesao/${lesaoId}/comparar`} asChild>
+          <Pressable className="bg-superficie border border-primaria rounded-xl py-2.5 items-center mb-4">
+            <Text className="text-primaria font-semibold text-xs">Comparar fotos ao longo do tempo</Text>
+          </Pressable>
+        </Link>
+      )}
+
+      {largo ? (
+        <View className="flex-row gap-6">
+          <View className="flex-1">{blocoGraficos}</View>
+          <View className="flex-1">{blocoRegistros}</View>
+        </View>
+      ) : (
+        <>
+          {blocoGraficos}
+          <View className="mt-6" />
+          {blocoRegistros}
+        </>
+      )}
     </ScrollView>
   );
 }

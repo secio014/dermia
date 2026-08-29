@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Image, Pressable, Text, View } from 'react-native';
+import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
+import { Image, Platform, Pressable, Text, View } from 'react-native';
 
 import { palette } from '@/constants/Colors';
 
 export default function CameraCapture({ onCapture }: { onCapture: (uri: string) => void }) {
   const [permissao, solicitarPermissao] = useCameraPermissions();
   const [foto, setFoto] = useState<string | null>(null);
+  const [facing, setFacing] = useState<CameraType>('back');
   const cameraRef = useRef<CameraView>(null);
 
   if (!permissao) {
@@ -22,7 +24,7 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
         <Pressable
           onPress={solicitarPermissao}
           className="bg-primaria rounded-xl py-3 px-6 items-center">
-          <Text className="text-superficie font-semibold">Permitir câmera</Text>
+          <Text className="text-white font-semibold">Permitir câmera</Text>
         </Pressable>
       </View>
     );
@@ -46,7 +48,7 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
           <Pressable
             onPress={() => onCapture(foto)}
             className="flex-1 bg-primaria rounded-xl py-3 items-center">
-            <Text className="text-superficie font-semibold">Usar foto</Text>
+            <Text className="text-white font-semibold">Usar foto</Text>
           </Pressable>
         </View>
       </View>
@@ -56,7 +58,7 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
   return (
     <View className="flex-1 bg-fundo">
       <View style={{ flex: 1 }}>
-        <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" />
+        <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing} />
         <View
           pointerEvents="none"
           style={{
@@ -73,13 +75,32 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
               width: '75%',
               aspectRatio: 1,
               borderWidth: 3,
-              borderColor: palette.superficie,
+              borderColor: '#FFFFFF',
               borderRadius: 16,
               borderStyle: 'dashed',
             }}
           />
         </View>
+
+        {Platform.OS !== 'web' && (
+          <Pressable
+            onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <Ionicons name="camera-reverse-outline" size={24} color="#FFFFFF" />
+          </Pressable>
+        )}
       </View>
+
       <View className="p-4 items-center bg-fundo">
         <Pressable
           onPress={capturar}

@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import MapaCorporal from '@/components/MapaCorporal';
+import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import {
   GRAUS_CLINICOS,
@@ -65,6 +66,7 @@ export default function NovaLesao() {
       setErro(error.message);
       return;
     }
+    avisar('Lesão registrada.');
     router.replace(`/paciente/${id}`);
   }
 

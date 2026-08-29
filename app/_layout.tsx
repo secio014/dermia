@@ -1,13 +1,27 @@
-import { useFonts } from 'expo-font';
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider,
+  type Theme,
+} from 'expo-router';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 
 import Auth from '@/components/Auth';
-import { useColorScheme } from '@/components/useColorScheme';
+import Aviso from '@/components/ui/Aviso';
+import { paletas, palette } from '@/constants/Colors';
+import { instalarFonteInter } from '@/.lib/fonte';
+import { useTema } from '@/.lib/tema';
 import { LOGIN_DESATIVADO } from '@/.lib/dev';
 import { useSessao } from '@/.lib/useSessao';
 
@@ -17,59 +31,69 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
+  // Ensure that reloading on `/admin` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
+// Prevent the splash screen from auto-hiding before fonts/theme are resolved.
 SplashScreen.preventAutoHideAsync();
+instalarFonteInter();
 
-export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
-  return <RootLayoutNav />;
+function temaNavegacao(esquema: 'light' | 'dark'): Theme {
+  const base = esquema === 'dark' ? DarkTheme : DefaultTheme;
+  const c = paletas[esquema];
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: c.primaria,
+      background: c.fundo,
+      card: c.superficie,
+      text: c.texto,
+      border: c.borda,
+      notification: c.risco,
+    },
+  };
 }
 
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const { esquema } = useTema();
   const { sessao, carregando } = useSessao();
+  const [fontesProntas] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
-  if (carregando) {
+  if (carregando || !fontesProntas) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }
+
+  SplashScreen.hideAsync();
 
   if (!LOGIN_DESATIVADO && !sessao) {
     return <Auth />;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="admin" options={{ presentation: 'modal', title: 'Painel de Admin' }} />
-      </Stack>
+    <ThemeProvider value={temaNavegacao(esquema)}>
+      <View className="flex-1 bg-fundo">
+        <Stack screenOptions={{ contentStyle: { backgroundColor: paletas[esquema].fundo } }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="admin" options={{ presentation: 'modal', title: 'Painel de Admin' }} />
+          <Stack.Screen
+            name="consulta/nova"
+            options={{ presentation: 'modal', title: 'Nova consulta' }}
+          />
+          <Stack.Screen name="consulta/[id]" options={{ title: 'Consulta' }} />
+        </Stack>
+        <Aviso />
+      </View>
     </ThemeProvider>
   );
 }

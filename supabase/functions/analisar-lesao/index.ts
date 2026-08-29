@@ -1,10 +1,19 @@
-// Edge Function: recebe { analise_id }, busca a foto no Storage, chama o
-// Ollama local pra sugerir o grau clínico da queimadura, valida a resposta
-// com Zod e grava o resultado em analises_ia.
+// Edge Function: recebe { analise_id }, busca a foto no Storage, chama um
+// servidor de IA (Ollama) rodando à parte na internet pra sugerir o grau
+// clínico da queimadura, valida a resposta com Zod e grava em analises_ia.
+//
+// Contrato do servidor externo:
+//   POST {OLLAMA_HOST}/api/generate
+//   body: { model, prompt, images: [base64], format: "json", stream: false }
+//   resposta esperada: { response: "<JSON string>" }, onde o JSON casa com
+//   ResultadoOllama abaixo ({ grau_sugerido, confianca 0-1, observacao? }).
+//
+// Enquanto OLLAMA_HOST não estiver setado, cada análise fica status="erro"
+// (tratado) e o app segue com validação manual — nada quebra.
 //
 // Deploy: supabase functions deploy analisar-lesao
 // Variáveis necessárias (supabase secrets set ...):
-//   OLLAMA_HOST   ex: http://ollama-host:11434
+//   OLLAMA_HOST   ex: https://ia.seu-dominio.com  (precisa ser público/HTTPS)
 //   OLLAMA_MODELO ex: llama3.2-vision
 // SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY já são injetadas automaticamente.
 

@@ -1,0 +1,25 @@
+# Deploy da web estática do DermIA no Netlify.
+# Conectar o repositório em app.netlify.com → "Add new site" → "Import an existing project".
+# O domínio próprio entra em Site settings → Domain management → Add a domain.
+
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback — rota profunda dá 200 no index.html (o expo-router resolve no cliente).
+# (o dist/ também traz um public/_redirects com a mesma regra, como backup.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"

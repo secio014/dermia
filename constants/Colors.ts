@@ -1,31 +1,52 @@
-// Paleta oficial do design system DermIA (ver tailwind.config.js)
-const palette = {
-  fundo: '#F7F9FB',
+// Paleta oficial do design system DermIA — tema "queimadura".
+// Mantida em sincronia com as CSS variables em global.css / tailwind.config.js.
+// Use estes valores onde não dá para usar className (ActivityIndicator,
+// navegação, câmera). Para telas com NativeWind, prefira as classes (bg-fundo…).
+
+const claro = {
+  fundo: '#FFF5F4',
   superficie: '#FFFFFF',
-  texto: '#0F1B2D',
-  secundario: '#5B6B7F',
-  borda: '#DCE3EC',
-  primaria: '#0E5FD8',
+  texto: '#2B0F0C',
+  secundario: '#8A5A54',
+  borda: '#F2D7D3',
+  primaria: '#C81E3A',
+  primariaSuave: '#FBE4E4',
   ok: '#0F9D6C',
   atencao: '#D97706',
-  risco: '#C81E3A',
+  risco: '#B0121F',
 };
+
+const escuro = {
+  fundo: '#1A0E0D',
+  superficie: '#241413',
+  texto: '#FCEBE9',
+  secundario: '#C79A94',
+  borda: '#3D2320',
+  primaria: '#F0546B',
+  primariaSuave: '#3A1A1C',
+  ok: '#34D399',
+  atencao: '#FBBF24',
+  risco: '#FF6B6B',
+};
+
+export const paletas = { light: claro, dark: escuro } as const;
+
+// Compat: `palette` continua apontando para o tema claro (usado em spinners etc.).
+export const palette = claro;
 
 export default {
   light: {
-    text: palette.texto,
-    background: palette.fundo,
-    tint: palette.primaria,
-    tabIconDefault: palette.secundario,
-    tabIconSelected: palette.primaria,
+    text: claro.texto,
+    background: claro.fundo,
+    tint: claro.primaria,
+    tabIconDefault: claro.secundario,
+    tabIconSelected: claro.primaria,
   },
   dark: {
-    text: palette.superficie,
-    background: palette.texto,
-    tint: palette.primaria,
-    tabIconDefault: palette.secundario,
-    tabIconSelected: palette.primaria,
+    text: escuro.texto,
+    background: escuro.fundo,
+    tint: escuro.primaria,
+    tabIconDefault: escuro.secundario,
+    tabIconSelected: escuro.primaria,
   },
 };
-
-export { palette };
