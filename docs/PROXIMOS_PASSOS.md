@@ -106,7 +106,9 @@ psql "postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres" -f backups
 
 ## 3. Verificar RLS no dashboard
 
-Não dá para verificar isso pelo código. No **SQL Editor do Supabase**, rode:
+Não dá para verificar isso pelo código. Abra `scripts/verificar-rls.sql` e cole o
+conteúdo inteiro no **SQL Editor do Supabase** (não altera nada, só relata). Ele
+roda as queries abaixo:
 
 ```sql
 -- Tabelas SEM RLS ativo (o resultado ideal é nenhuma linha)
@@ -174,12 +176,11 @@ um profissional** e o isolamento RLS entre profissionais nunca é exercido.
 
 ### 5.1. Criar os profissionais reais no Supabase
 
-Use o SQL da seção 2 do `docs/GUIA_ADMINISTRADOR.md` (cria clínica + `auth.users` +
-`profissionais`). **Cuidado com as colunas de token em `auth.users` — precisam ser
-`''`, nunca `NULL`** (também explicado no guia).
-
-Crie pelo menos: 1 admin + 1 fisioterapeuta comum, para conseguir testar o
-isolamento.
+Abra `scripts/onboarding-clinica.sql`, preencha os valores em `<...>` no topo do
+bloco `do $$` (nome da clínica, nomes/emails/senhas do admin e do fisioterapeuta)
+e rode no SQL Editor do Supabase. Ele já cria clínica + `auth.users` (com as
+colunas de token em `''`, nunca `NULL`) + `profissionais`, com 1 admin + 1
+fisioterapeuta comum — o mínimo para testar o isolamento.
 
 ### 5.2. Ligar a tela de login
 
@@ -202,9 +203,10 @@ apagar `.lib/dev.ts` e remover os `import`/guards em `_layout.tsx` e `useSessao.
 
 ### 5.4. Atualizar os scripts
 
-`scripts/seed-piloto.mjs` e `scripts/limpar-seed.mjs` logam com o profissional de
-teste hardcoded. Depois de reativar o login, ou você mantém esse usuário de teste
-só para os scripts, ou ajusta os scripts para receberem credenciais via env.
+`scripts/seed-piloto.mjs` e `scripts/limpar-seed.mjs` agora aceitam credenciais
+via env — `SEED_EMAIL=... SEED_SENHA=... node scripts/seed-piloto.mjs` — com
+fallback para `teste@dermia.local`. Depois de reativar o login real, use as
+credenciais de um profissional real ou mantenha o usuário de teste só para eles.
 
 ---
 
@@ -229,7 +231,9 @@ para uso diário.
 npx expo export --platform web    # gera a pasta dist/
 ```
 
-Depois publique `dist/` num host grátis com HTTPS:
+A pasta `dist/` **já foi gerada** nesta rodada (25 rotas, bundle ~2.6 MB). Para
+regerar depois de mudanças no código, rode o comando de novo. Depois publique
+`dist/` num host grátis com HTTPS:
 
 - **Cloudflare Pages** ou **Netlify** ou **Vercel** — todos têm plano grátis, todos
   dão HTTPS automático.
@@ -286,3 +290,24 @@ pesado, etc.). Passos:
 - `.gitignore` — ignora `backups/`
 - `docs/PLANO_ROLLOUT.md` — modelo para expandir para outras clínicas
 - este arquivo
+
+## Feito na rodada seguinte
+
+- `scripts/verificar-rls.sql` — auditoria de RLS pronta pra colar no SQL Editor (seção 3)
+- `scripts/onboarding-clinica.sql` — cria clínica + admin + fisioterapeuta, tokens
+  em `''`, só preencher os `<...>` (seção 5.1)
+- `scripts/seed-piloto.mjs` / `scripts/limpar-seed.mjs` — aceitam `SEED_EMAIL` /
+  `SEED_SENHA` via env, fallback pro usuário de teste (seção 5.4)
+- `dist/` — build web estático gerado (`npx expo export --platform web`), pronto
+  pra arrastar num host (seção 6, Opção B)
+
+### Continua dependendo só de você (não dá pra automatizar aqui)
+
+1. Instalar PostgreSQL 17 + pôr no PATH, senha do banco no `.env`, rodar/agendar
+   `scripts/backup.mjs` (seção 2)
+2. Colar `scripts/verificar-rls.sql` no dashboard e corrigir o que aparecer (seção 3)
+3. Decidir IA real vs. validação manual (seção 4) — recomendação: manual no piloto
+4. Preencher e rodar `scripts/onboarding-clinica.sql`, depois virar
+   `LOGIN_DESATIVADO = false` em `.lib/dev.ts` e testar o isolamento (seção 5)
+5. Criar conta num host (Netlify/Cloudflare/Vercel) e publicar `dist/` (seção 6)
+6. Termo de tratamento de dados com a clínica + checklist LGPD (seção 7)

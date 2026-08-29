@@ -2,6 +2,8 @@
 // tudo em cascata: lesões, análises_ia, etc).
 //
 // Uso: node scripts/limpar-seed.mjs
+// Login: por padrão usa teste@dermia.local; após reativar o login real, passe
+//   SEED_EMAIL=... SEED_SENHA=... node scripts/limpar-seed.mjs
 
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
@@ -16,8 +18,8 @@ const env = Object.fromEntries(
 const supabase = createClient(env.EXPO_PUBLIC_SUPABASE_URL, env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
 const { error: erroLogin } = await supabase.auth.signInWithPassword({
-  email: 'teste@dermia.local',
-  password: 'senha-teste-123',
+  email: process.env.SEED_EMAIL ?? 'teste@dermia.local',
+  password: process.env.SEED_SENHA ?? 'senha-teste-123',
 });
 if (erroLogin) {
   console.error('Erro no login:', erroLogin.message);

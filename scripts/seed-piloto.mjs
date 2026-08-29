@@ -4,7 +4,9 @@
 // Uso:
 //   node scripts/seed-piloto.mjs --pacientes=100 --fotos=1000
 //
-// Usa o profissional de teste (.lib/dev.ts) já configurado no projeto.
+// Login: por padrão usa o profissional de teste (teste@dermia.local). Depois de
+// reativar o login real, passe credenciais por env:
+//   SEED_EMAIL=fisio@clinica.com SEED_SENHA=... node scripts/seed-piloto.mjs
 // Reaproveita UMA foto minúscula de placeholder pra todas as "análises" —
 // o objetivo aqui é testar volume de linhas/consultas, não fotos reais.
 
@@ -31,8 +33,8 @@ const env = Object.fromEntries(
 const supabase = createClient(env.EXPO_PUBLIC_SUPABASE_URL, env.EXPO_PUBLIC_SUPABASE_ANON_KEY);
 
 const { error: erroLogin } = await supabase.auth.signInWithPassword({
-  email: 'teste@dermia.local',
-  password: 'senha-teste-123',
+  email: process.env.SEED_EMAIL ?? 'teste@dermia.local',
+  password: process.env.SEED_SENHA ?? 'senha-teste-123',
 });
 if (erroLogin) {
   console.error('Erro no login:', erroLogin.message);
