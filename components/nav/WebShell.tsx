@@ -6,6 +6,7 @@ import { Animated, Pressable, Text, View } from 'react-native';
 
 import { ITENS_NAV } from '@/components/nav/itens';
 import WebFooter from '@/components/nav/WebFooter';
+import LogoDermia from '@/components/ui/LogoDermia';
 import { useTema } from '@/.lib/tema';
 
 const CHAVE_MENU = 'dermia:menu-aberto';
@@ -54,9 +55,7 @@ export default function WebShell() {
             className={`flex-row items-center mb-6 ${aberto ? 'justify-between px-1' : 'justify-center'}`}>
             {aberto && (
               <View className="flex-row items-center gap-2">
-                <View className="w-8 h-8 rounded-lg bg-primaria items-center justify-center">
-                  <Ionicons name="pulse" size={18} color="#fff" />
-                </View>
+                <LogoDermia size={28} />
                 <Text className="text-texto text-xl font-bold">DermIA</Text>
               </View>
             )}

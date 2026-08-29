@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import CameraCapture from '@/components/CameraCapture';
@@ -74,5 +74,10 @@ export default function NovaFoto() {
     );
   }
 
-  return <CameraCapture onCapture={enviar} />;
+  return (
+    <>
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <CameraCapture onCapture={enviar} />
+    </>
+  );
 }

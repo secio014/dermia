@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Text, View } from 'react-native';
 
 import { palette } from '@/constants/Colors';
 import { useTema } from '@/.lib/tema';
@@ -9,7 +9,12 @@ import { proximaConsulta, type Consulta } from '@/.lib/agenda';
 import { listarPrescricoes, type Prescricao } from '@/.lib/prescricoes';
 import { supabase } from '@/.lib/supabase';
 
-type Exercicio = { id: string; titulo: string; frequencia_semanal: number | null };
+type Exercicio = {
+  id: string;
+  titulo: string;
+  frequencia_semanal: number | null;
+  video_url: string | null;
+};
 
 export default function SecaoTratamento({ pacienteId }: { pacienteId: string }) {
   const { cores } = useTema();
@@ -24,7 +29,7 @@ export default function SecaoTratamento({ pacienteId }: { pacienteId: string }) 
       listarPrescricoes(pacienteId, { somenteAtivas: true }),
       supabase
         .from('exercicios_prescritos')
-        .select('id, titulo, frequencia_semanal')
+        .select('id, titulo, frequencia_semanal, video_url')
         .eq('paciente_id', pacienteId)
         .eq('ativo', true),
     ]);
@@ -93,10 +98,19 @@ export default function SecaoTratamento({ pacienteId }: { pacienteId: string }) 
         <Text className="text-secundario">Nenhum exercício no plano.</Text>
       ) : (
         exercicios.map((e) => (
-          <View key={e.id} className="flex-row justify-between py-2 border-b border-borda">
-            <Text className="text-texto">{e.titulo}</Text>
-            {e.frequencia_semanal ? (
-              <Text className="text-secundario text-xs">{e.frequencia_semanal}x/sem</Text>
+          <View key={e.id} className="py-2 border-b border-borda">
+            <View className="flex-row justify-between">
+              <Text className="text-texto">{e.titulo}</Text>
+              {e.frequencia_semanal ? (
+                <Text className="text-secundario text-xs">{e.frequencia_semanal}x/sem</Text>
+              ) : null}
+            </View>
+            {e.video_url ? (
+              <Text
+                onPress={() => Linking.openURL(e.video_url!)}
+                className="text-primaria text-xs font-semibold mt-1">
+                ▶ Ver vídeo
+              </Text>
             ) : null}
           </View>
         ))

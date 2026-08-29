@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
+import SeletorData from '@/components/ui/SeletorData';
 import { palette } from '@/constants/Colors';
+import { enviarDocumentoPorEmail } from '@/.lib/documentos';
 import { obterUrlAssinada } from '@/.lib/foto';
 import {
   gerarECompartilharPDF,
@@ -18,6 +20,7 @@ export default function RelatorioPaciente() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [incluirFotos, setIncluirFotos] = useState(true);
+  const [porEmail, setPorEmail] = useState(false);
   const [gerando, setGerando] = useState<'evolucao' | 'alta' | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -27,9 +30,14 @@ export default function RelatorioPaciente() {
     try {
       const { data: paciente } = await supabase
         .from('pacientes')
-        .select('nome_completo, codigo_pseudonimo')
+        .select('nome_completo, codigo_pseudonimo, email')
         .eq('id', id)
         .single();
+
+      if (porEmail && !paciente?.email) {
+        setErro('Este paciente não tem e-mail cadastrado.');
+        return;
+      }
 
       let consultaLesoes = supabase
         .from('lesoes')
@@ -80,7 +88,16 @@ export default function RelatorioPaciente() {
         fotos,
       });
 
-      await gerarECompartilharPDF(html);
+      if (porEmail) {
+        const { error } = await enviarDocumentoPorEmail({
+          pacienteId: id,
+          assunto: 'Seu relatório de acompanhamento — DermIA',
+          html,
+        });
+        if (error) setErro(error);
+      } else {
+        await gerarECompartilharPDF(html);
+      }
     } catch (e) {
       const mensagem =
         e instanceof Error
@@ -99,29 +116,27 @@ export default function RelatorioPaciente() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-xl self-center"
       contentContainerStyle={{ paddingBottom: 32 }}>
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       <Text className="text-texto text-lg font-bold mb-4">Relatório em PDF</Text>
 
       <Text className="text-secundario text-xs mb-1">Período (opcional)</Text>
       <View className="flex-row gap-3 mb-4">
-        <TextInput
-          value={dataInicio}
-          onChangeText={setDataInicio}
-          placeholder="Início (AAAA-MM-DD)"
-          placeholderTextColor="#5B6B7F"
-          className="flex-1 bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
-        />
-        <TextInput
-          value={dataFim}
-          onChangeText={setDataFim}
-          placeholder="Fim (AAAA-MM-DD)"
-          placeholderTextColor="#5B6B7F"
-          className="flex-1 bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
-        />
+        <View className="flex-1">
+          <SeletorData valor={dataInicio} onChange={setDataInicio} placeholder="Início" opcional />
+        </View>
+        <View className="flex-1">
+          <SeletorData valor={dataFim} onChange={setDataFim} placeholder="Fim" opcional />
+        </View>
+      </View>
+
+      <View className="flex-row items-center justify-between bg-superficie border border-borda rounded-xl px-4 py-3 mb-3">
+        <Text className="text-texto">Incluir fotos</Text>
+        <Switch value={incluirFotos} onValueChange={setIncluirFotos} />
       </View>
 
       <View className="flex-row items-center justify-between bg-superficie border border-borda rounded-xl px-4 py-3 mb-6">
-        <Text className="text-texto">Incluir fotos</Text>
-        <Switch value={incluirFotos} onValueChange={setIncluirFotos} />
+        <Text className="text-texto">Enviar por e-mail ao paciente</Text>
+        <Switch value={porEmail} onValueChange={setPorEmail} />
       </View>
 
       {erro && <Text className="text-risco mb-3">{erro}</Text>}
@@ -133,7 +148,9 @@ export default function RelatorioPaciente() {
         {gerando === 'evolucao' ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text className="text-superficie font-semibold">Gerar relatório de evolução</Text>
+          <Text className="text-superficie font-semibold">
+            {porEmail ? 'Enviar relatório de evolução' : 'Gerar relatório de evolução'}
+          </Text>
         )}
       </Pressable>
 
@@ -144,7 +161,9 @@ export default function RelatorioPaciente() {
         {gerando === 'alta' ? (
           <ActivityIndicator color={palette.primaria} />
         ) : (
-          <Text className="text-texto font-semibold">Gerar relatório de alta</Text>
+          <Text className="text-texto font-semibold">
+            {porEmail ? 'Enviar relatório de alta' : 'Gerar relatório de alta'}
+          </Text>
         )}
       </Pressable>
     </ScrollView>

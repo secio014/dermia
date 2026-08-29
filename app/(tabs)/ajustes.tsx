@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
+import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -82,6 +83,10 @@ export default function TelaAjustes() {
           </View>
         </View>
       </Secao>
+
+      <Link href="/nav" className="text-primaria font-semibold px-1 py-2">
+        Página de navegação (dev)
+      </Link>
     </ScrollView>
   );
 }

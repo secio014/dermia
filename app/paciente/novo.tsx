@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
@@ -17,6 +17,7 @@ function gerarCodigo(): string {
 
 export default function NovoPaciente() {
   const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [consentiu, setConsentiu] = useState(false);
   const [codigo] = useState(gerarCodigo());
@@ -49,6 +50,7 @@ export default function NovoPaciente() {
         criado_por: perfil.id,
         codigo_pseudonimo: codigo,
         nome_completo: nome.trim(),
+        email: email.trim() || null,
         data_nascimento: dataNascimento || null,
         consentimento_em: new Date().toISOString(),
         consentimento_versao: '1.0',
@@ -67,6 +69,7 @@ export default function NovoPaciente() {
 
   return (
     <View className="flex-1 bg-fundo px-6 pt-6 w-full max-w-2xl self-center">
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
       <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
 
@@ -76,6 +79,16 @@ export default function NovoPaciente() {
         placeholder="Nome completo"
         placeholderTextColor="#5B6B7F"
         autoCapitalize="words"
+        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
+      />
+
+      <TextInput
+        value={email}
+        onChangeText={setEmail}
+        placeholder="E-mail (opcional — para enviar documentos e acesso ao portal)"
+        placeholderTextColor="#5B6B7F"
+        autoCapitalize="none"
+        keyboardType="email-address"
         className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
       />
 

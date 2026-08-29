@@ -19,6 +19,7 @@ import '../global.css';
 
 import Auth from '@/components/Auth';
 import Aviso from '@/components/ui/Aviso';
+import LogoDermia from '@/components/ui/LogoDermia';
 import { paletas, palette } from '@/constants/Colors';
 import { instalarFonteInter } from '@/.lib/fonte';
 import { useTema } from '@/.lib/tema';
@@ -83,14 +84,20 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={temaNavegacao(esquema)}>
       <View className="flex-1 bg-fundo">
-        <Stack screenOptions={{ contentStyle: { backgroundColor: paletas[esquema].fundo } }}>
+        <Stack
+          screenOptions={{
+            contentStyle: { backgroundColor: paletas[esquema].fundo },
+            headerTitle: 'Derm.IA',
+            headerRight: () => (
+              <View style={{ marginRight: 4 }}>
+                <LogoDermia size={22} />
+              </View>
+            ),
+          }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="admin" options={{ presentation: 'modal', title: 'Painel de Admin' }} />
-          <Stack.Screen
-            name="consulta/nova"
-            options={{ presentation: 'modal', title: 'Nova consulta' }}
-          />
-          <Stack.Screen name="consulta/[id]" options={{ title: 'Consulta' }} />
+          <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="consulta/nova" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="consulta/[id]" />
         </Stack>
         <Aviso />
       </View>

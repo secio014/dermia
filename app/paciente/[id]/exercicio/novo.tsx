@@ -1,25 +1,55 @@
-import { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import SeletorCatalogo from '@/components/ui/SeletorCatalogo';
 import { avisar } from '@/.lib/aviso';
+import {
+  criarExercicioCatalogo,
+  escolherArquivo,
+  enviarMidiaExercicio,
+  listarCatalogoExercicios,
+  TAMANHO_MAX_VIDEO_MB,
+  type ExercicioCatalogo,
+} from '@/.lib/exercicios';
 import { obterPerfilProfissional } from '@/.lib/perfil';
+import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
+
+const campo = 'bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto';
 
 export default function NovoExercicio() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { cores } = useTema();
+
   const [titulo, setTitulo] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [catalogoId, setCatalogoId] = useState<string | null>(null);
+
   const [series, setSeries] = useState('');
   const [repeticoes, setRepeticoes] = useState('');
   const [frequenciaSemanal, setFrequenciaSemanal] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const [catalogo, setCatalogo] = useState<ExercicioCatalogo[]>([]);
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => {
+    listarCatalogoExercicios(busca).then(setCatalogo);
+  }, [busca]);
+
+  function selecionarDoCatalogo(item: ExercicioCatalogo) {
+    setTitulo(item.titulo);
+    setInstrucoes(item.instrucoes ?? '');
+    setVideoUrl(item.video_url ?? '');
+    setCatalogoId(item.id);
+  }
+
   async function salvar() {
     if (!titulo.trim()) {
-      setErro('Informe o título do exercício.');
+      setErro('Escolha um exercício do catálogo ou cadastre um novo.');
       return;
     }
     if (series && Number(series) <= 0) {
@@ -47,6 +77,7 @@ export default function NovoExercicio() {
     const { error } = await supabase.from('exercicios_prescritos').insert({
       paciente_id: id,
       profissional_id: perfil.id,
+      catalogo_id: catalogoId,
       titulo: titulo.trim(),
       instrucoes: instrucoes.trim() || null,
       video_url: videoUrl.trim() || null,
@@ -69,38 +100,60 @@ export default function NovoExercicio() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-2xl self-center"
       contentContainerStyle={{ paddingBottom: 32 }}>
-      <TextInput
-        value={titulo}
-        onChangeText={setTitulo}
-        placeholder="Título (ex: Alongamento de ombro)"
-        placeholderTextColor="#5B6B7F"
-        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
-      />
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
 
-      <TextInput
-        value={instrucoes}
-        onChangeText={setInstrucoes}
-        placeholder="Instruções (opcional)"
-        placeholderTextColor="#5B6B7F"
-        multiline
-        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto min-h-[80px]"
-      />
+      <Text className="text-secundario text-xs font-semibold mb-1">EXERCÍCIO</Text>
+      <View className="mb-3">
+        <SeletorCatalogo<ExercicioCatalogo>
+          itens={catalogo}
+          keyItem={(e) => e.id}
+          rotuloItem={(e) => e.titulo}
+          descricaoItem={(e) => {
+            const midia = [
+              e.video_url || e.video_path ? '🎬 vídeo' : null,
+              e.imagem_path ? '🖼 imagem' : null,
+            ]
+              .filter(Boolean)
+              .join(' · ');
+            const texto = e.instrucoes?.slice(0, 60);
+            return [texto, midia].filter(Boolean).join(' — ') || null;
+          }}
+          idSelecionado={catalogoId}
+          busca={busca}
+          onBusca={setBusca}
+          onSelecionar={selecionarDoCatalogo}
+          renderFormNovo={(fechar) => (
+            <FormNovoExercicio
+              onCriado={(item) => {
+                setCatalogo((atual) => [item, ...atual]);
+                selecionarDoCatalogo(item);
+                fechar();
+              }}
+            />
+          )}
+        />
+      </View>
 
-      <TextInput
-        value={videoUrl}
-        onChangeText={setVideoUrl}
-        placeholder="Link do vídeo (opcional)"
-        placeholderTextColor="#5B6B7F"
-        autoCapitalize="none"
-        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
-      />
+      {titulo ? (
+        <View className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3">
+          {instrucoes ? (
+            <Text className="text-secundario text-xs mb-1">{instrucoes}</Text>
+          ) : null}
+          {videoUrl ? (
+            <Text className="text-primaria text-xs" numberOfLines={1}>
+              🎬 {videoUrl}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
+      <Text className="text-secundario text-xs font-semibold mb-1 mt-1">DOSE DO EXERCÍCIO</Text>
       <View className="flex-row gap-3 mb-3">
         <TextInput
           value={series}
           onChangeText={setSeries}
           placeholder="Séries"
-          placeholderTextColor="#5B6B7F"
+          placeholderTextColor={cores.secundario}
           keyboardType="numeric"
           className="flex-1 bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
         />
@@ -108,7 +161,7 @@ export default function NovoExercicio() {
           value={repeticoes}
           onChangeText={setRepeticoes}
           placeholder="Repetições"
-          placeholderTextColor="#5B6B7F"
+          placeholderTextColor={cores.secundario}
           keyboardType="numeric"
           className="flex-1 bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
         />
@@ -118,9 +171,9 @@ export default function NovoExercicio() {
         value={frequenciaSemanal}
         onChangeText={setFrequenciaSemanal}
         placeholder="Frequência por semana (ex: 5)"
-        placeholderTextColor="#5B6B7F"
+        placeholderTextColor={cores.secundario}
         keyboardType="numeric"
-        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
+        className={campo}
       />
 
       {erro && <Text className="text-risco mb-3">{erro}</Text>}
@@ -136,5 +189,129 @@ export default function NovoExercicio() {
         )}
       </Pressable>
     </ScrollView>
+  );
+}
+
+function FormNovoExercicio({ onCriado }: { onCriado: (item: ExercicioCatalogo) => void }) {
+  const { cores } = useTema();
+  const [titulo, setTitulo] = useState('');
+  const [instrucoes, setInstrucoes] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoPath, setVideoPath] = useState<string | null>(null);
+  const [imagemPath, setImagemPath] = useState<string | null>(null);
+  const [enviandoMidia, setEnviandoMidia] = useState<'video' | 'imagem' | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function anexar(tipo: 'video' | 'imagem') {
+    setErro(null);
+    const arquivo = await escolherArquivo(tipo === 'video' ? 'video' : 'imagem');
+    if (!arquivo) return;
+    const perfil = await obterPerfilProfissional();
+    if (!perfil) {
+      setErro('Não foi possível identificar o profissional logado.');
+      return;
+    }
+    setEnviandoMidia(tipo);
+    const { path, error } = await enviarMidiaExercicio(arquivo, tipo, perfil.clinica_id);
+    setEnviandoMidia(null);
+    if (error || !path) {
+      setErro(error ?? 'Falha ao enviar o arquivo.');
+      return;
+    }
+    if (tipo === 'video') setVideoPath(path);
+    else setImagemPath(path);
+  }
+
+  async function salvar() {
+    if (!titulo.trim()) {
+      setErro('Informe o título.');
+      return;
+    }
+    setErro(null);
+    setSalvando(true);
+    const { item, error } = await criarExercicioCatalogo({
+      titulo: titulo.trim(),
+      instrucoes: instrucoes.trim() || null,
+      video_url: videoUrl.trim() || null,
+      video_path: videoPath,
+      imagem_path: imagemPath,
+    });
+    setSalvando(false);
+    if (error || !item) {
+      setErro(error ?? 'Falha ao cadastrar.');
+      return;
+    }
+    onCriado(item);
+  }
+
+  return (
+    <View>
+      <TextInput
+        value={titulo}
+        onChangeText={setTitulo}
+        placeholder="Título (ex.: Alongamento de ombro)"
+        placeholderTextColor={cores.secundario}
+        className={campo}
+      />
+      <TextInput
+        value={instrucoes}
+        onChangeText={setInstrucoes}
+        placeholder="Instruções (opcional)"
+        placeholderTextColor={cores.secundario}
+        multiline
+        className={`${campo} min-h-[80px]`}
+      />
+      <TextInput
+        value={videoUrl}
+        onChangeText={setVideoUrl}
+        placeholder="Link do vídeo (YouTube, Drive…)"
+        placeholderTextColor={cores.secundario}
+        autoCapitalize="none"
+        className={campo}
+      />
+
+      <View className="flex-row gap-3 mb-1">
+        <Pressable
+          onPress={() => anexar('video')}
+          disabled={enviandoMidia !== null}
+          className="flex-1 border border-borda rounded-xl py-3 items-center">
+          {enviandoMidia === 'video' ? (
+            <ActivityIndicator color={cores.primaria} />
+          ) : (
+            <Text className="text-texto text-xs font-semibold">
+              {videoPath ? '✓ Vídeo enviado' : 'Enviar vídeo'}
+            </Text>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={() => anexar('imagem')}
+          disabled={enviandoMidia !== null}
+          className="flex-1 border border-borda rounded-xl py-3 items-center">
+          {enviandoMidia === 'imagem' ? (
+            <ActivityIndicator color={cores.primaria} />
+          ) : (
+            <Text className="text-texto text-xs font-semibold">
+              {imagemPath ? '✓ Imagem enviada' : 'Enviar imagem'}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+      <Text className="text-secundario text-xs mb-3">
+        Vídeo: link ou arquivo (até {TAMANHO_MAX_VIDEO_MB} MB).
+      </Text>
+
+      {erro && <Text className="text-risco mb-3">{erro}</Text>}
+      <Pressable
+        onPress={salvar}
+        disabled={salvando}
+        className="bg-primaria rounded-xl py-3 items-center">
+        {salvando ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="text-white font-semibold">Salvar no catálogo</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }

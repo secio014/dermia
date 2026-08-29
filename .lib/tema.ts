@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { useColorScheme } from 'nativewind';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { paletas } from '@/constants/Colors';
@@ -59,9 +60,31 @@ export function useTema() {
   }, []);
 
   // Aplica a preferência ao NativeWind sempre que ela muda.
+  //
+  // No nativo, `setColorScheme('system')` já faz o NativeWind seguir o
+  // `Appearance` do aparelho. Na web, o NativeWind com `darkMode: 'class'` não
+  // reage sozinho ao `prefers-color-scheme` do navegador quando a preferência é
+  // "system" — então ouvimos a media query e resolvemos manualmente para
+  // 'light' / 'dark'.
   useEffect(() => {
+    if (Platform.OS === 'web' && preferencia === 'system' && typeof window !== 'undefined') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const aplicar = () => setColorScheme(mq.matches ? 'dark' : 'light');
+      aplicar();
+      mq.addEventListener('change', aplicar);
+      return () => mq.removeEventListener('change', aplicar);
+    }
     setColorScheme(preferencia);
   }, [preferencia, setColorScheme]);
+
+  // Marca a escolha no <html> (web) para o CSS resolver o tema mesmo antes de o
+  // JS do NativeWind rodar — o `@media (prefers-color-scheme)` em global.css /
+  // +html.tsx usa `[data-tema]` para deixar a escolha explícita ganhar do SO.
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.documentElement.dataset.tema = preferencia;
+    }
+  }, [preferencia]);
 
   function escolher(nova: PreferenciaTema) {
     preferenciaAtual = nova;

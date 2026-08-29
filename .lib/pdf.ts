@@ -121,6 +121,139 @@ export function montarHtmlRelatorio({
     </html>`;
 }
 
+type ProfissionalDoc = { nome: string | null; registro?: string | null };
+type PacienteDoc = { nome: string | null; codigo?: string | null };
+
+function baseDoc(titulo: string, corpo: string, rodapeExtra = ''): string {
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: -apple-system, Arial, sans-serif; color: #0F1B2D; padding: 32px; line-height: 1.5; }
+          h1 { font-size: 20px; margin-bottom: 2px; }
+          h2 { font-size: 13px; color: #5B6B7F; font-weight: normal; margin-top: 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+          th, td { border: 1px solid #DCE3EC; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #F5F7FA; }
+          .corpo { margin-top: 20px; font-size: 14px; }
+          .assinatura { margin-top: 64px; text-align: center; font-size: 12px; }
+          .assinatura .linha { border-top: 1px solid #0F1B2D; width: 260px; margin: 0 auto 4px; }
+          .rodape { margin-top: 40px; font-size: 10px; color: #5B6B7F; }
+        </style>
+      </head>
+      <body>
+        <h1>DermIA — ${titulo}</h1>
+        ${corpo}
+        <p class="rodape">
+          ${rodapeExtra}
+          Gerado em ${new Date().toLocaleString('pt-BR')} pelo DermIA. Documento de uso clínico —
+          contém dados sensíveis de saúde protegidos por sigilo profissional e LGPD.
+        </p>
+      </body>
+    </html>`;
+}
+
+function blocoAssinatura(profissional: ProfissionalDoc): string {
+  return `
+    <div class="assinatura">
+      <div class="linha"></div>
+      <div>${profissional.nome ?? '—'}</div>
+      ${profissional.registro ? `<div>${profissional.registro}</div>` : ''}
+    </div>`;
+}
+
+export type ItemPrescricaoPDF = {
+  nome: string;
+  dose: string | null;
+  frequencia: string | null;
+  inicio: string | null;
+  fim: string | null;
+  observacoes: string | null;
+};
+
+export function montarHtmlPrescricao({
+  profissional,
+  paciente,
+  itens,
+}: {
+  profissional: ProfissionalDoc;
+  paciente: PacienteDoc;
+  itens: ItemPrescricaoPDF[];
+}): string {
+  const linhas = itens
+    .map(
+      (i) => `
+      <tr>
+        <td>${i.nome}</td>
+        <td>${i.dose ?? '—'}</td>
+        <td>${i.frequencia ?? '—'}</td>
+        <td>${[formatarData(i.inicio), formatarData(i.fim)].join(' → ')}</td>
+        <td>${i.observacoes ?? ''}</td>
+      </tr>`
+    )
+    .join('');
+
+  const corpo = `
+    <h2>${paciente.nome ?? '—'}${paciente.codigo ? ` (${paciente.codigo})` : ''}</h2>
+    <p class="corpo">Prescrição de remédios e curativos:</p>
+    <table>
+      <thead>
+        <tr><th>Item</th><th>Dose</th><th>Frequência</th><th>Período</th><th>Observações</th></tr>
+      </thead>
+      <tbody>${linhas || '<tr><td colspan="5">Nenhum item ativo.</td></tr>'}</tbody>
+    </table>
+    ${blocoAssinatura(profissional)}`;
+
+  return baseDoc('Prescrição', corpo);
+}
+
+export function montarHtmlAtestado({
+  profissional,
+  paciente,
+  tipo,
+  dias,
+  inicio,
+  fim,
+  cid,
+  finalidade,
+}: {
+  profissional: ProfissionalDoc;
+  paciente: PacienteDoc;
+  tipo: 'repouso' | 'comparecimento';
+  dias?: string | null;
+  inicio?: string | null;
+  fim?: string | null;
+  cid?: string | null;
+  finalidade?: string | null;
+}): string {
+  const nome = paciente.nome ?? '—';
+  const periodo =
+    inicio || fim
+      ? ` no período de ${formatarData(inicio ?? null)} a ${formatarData(fim ?? null)}`
+      : dias
+        ? ` pelo período de ${dias} dia(s)`
+        : '';
+
+  const texto =
+    tipo === 'repouso'
+      ? `Atesto, para os devidos fins, que o(a) paciente <strong>${nome}</strong> esteve sob meus
+         cuidados e necessita de afastamento de suas atividades${periodo}${
+           finalidade ? `, ${finalidade}` : ''
+         }.`
+      : `Atesto, para os devidos fins, que o(a) paciente <strong>${nome}</strong> compareceu a
+         atendimento nesta data${periodo ? `,${periodo}` : ''}${finalidade ? `, ${finalidade}` : ''}.`;
+
+  const corpo = `
+    <h2>${nome}${paciente.codigo ? ` (${paciente.codigo})` : ''}</h2>
+    <p class="corpo">${texto}</p>
+    ${cid ? `<p class="corpo">CID: ${cid}</p>` : ''}
+    <p class="corpo">${new Date().toLocaleDateString('pt-BR')}</p>
+    ${blocoAssinatura(profissional)}`;
+
+  return baseDoc('Atestado', corpo);
+}
+
 export async function gerarECompartilharPDF(html: string) {
   if (Platform.OS === 'web') {
     // expo-print não gera arquivo no web (só chama window.print() sem usar o

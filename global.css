@@ -38,8 +38,29 @@
     --risco: 176 18 31;
   }
 
+  /* Escolha explícita de escuro (toggle em Ajustes) — classe `.dark` do
+     NativeWind ou o atributo que o app grava no <html>. */
   .dark:root,
-  :root.dark {
+  :root.dark,
+  :root[data-tema='dark'] {
+    --fundo: 26 14 13;
+    --superficie: 36 20 19;
+    --texto: 252 235 233;
+    --secundario: 199 154 148;
+    --borda: 61 35 32;
+    --primaria: 240 84 107;
+    --primaria-suave: 58 26 28;
+    --ok: 52 211 153;
+    --atencao: 251 191 36;
+    --risco: 255 107 107;
+  }
+}
+
+/* Preferência "Sistema": segue o navegador automaticamente, a menos que o
+   usuário tenha forçado o claro (data-tema="light"). Fica fora do @layer para
+   ganhar de `:root` na cascata. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='light']):not(.light) {
     --fundo: 26 14 13;
     --superficie: 36 20 19;
     --texto: 252 235 233;

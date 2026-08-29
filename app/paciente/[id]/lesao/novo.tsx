@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import MapaCorporal from '@/components/MapaCorporal';
 import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
+import { useLargo } from '@/.lib/responsivo';
 import {
   GRAUS_CLINICOS,
   MECANISMOS,
@@ -18,6 +19,7 @@ import { supabase } from '@/.lib/supabase';
 
 export default function NovaLesao() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const largo = useLargo();
   const [regioes, setRegioes] = useState<RegiaoId[]>([]);
   const [pediatrico, setPediatrico] = useState(false);
   const [grauClinico, setGrauClinico] = useState<string | null>(null);
@@ -70,16 +72,18 @@ export default function NovaLesao() {
     router.replace(`/paciente/${id}`);
   }
 
-  return (
-    <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
-      <MapaCorporal
-        value={regioes}
-        onChange={setRegioes}
-        pediatrico={pediatrico}
-        onTogglePediatrico={setPediatrico}
-      />
+  const blocoMapa = (
+    <MapaCorporal
+      value={regioes}
+      onChange={setRegioes}
+      pediatrico={pediatrico}
+      onTogglePediatrico={setPediatrico}
+    />
+  );
 
-      <Text className="text-texto font-semibold mt-4 mb-2">Grau clínico</Text>
+  const blocoForm = (
+    <>
+      <Text className="text-texto font-semibold mb-2">Grau clínico</Text>
       <View className="flex-row flex-wrap gap-2 mb-3">
         {GRAUS_CLINICOS.map((g) => (
           <Pressable
@@ -133,6 +137,27 @@ export default function NovaLesao() {
           <Text className="text-superficie font-semibold">Salvar lesão</Text>
         )}
       </Pressable>
+    </>
+  );
+
+  return (
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
+      contentContainerStyle={{ paddingBottom: 32 }}>
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      {largo ? (
+        <View className="flex-row gap-6">
+          <View className="flex-1">{blocoMapa}</View>
+          <View className="flex-1">{blocoForm}</View>
+        </View>
+      ) : (
+        <>
+          {blocoMapa}
+          <View className="mt-4" />
+          {blocoForm}
+        </>
+      )}
     </ScrollView>
   );
 }

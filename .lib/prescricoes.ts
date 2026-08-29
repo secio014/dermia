@@ -41,6 +41,7 @@ type DadosPrescricao = {
   inicio?: string | null;
   fim?: string | null;
   observacoes?: string | null;
+  catalogo_id?: string | null;
 };
 
 export async function criarPrescricao(dados: DadosPrescricao): Promise<{ error: string | null }> {

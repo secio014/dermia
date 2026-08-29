@@ -1,10 +1,36 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { palette } from '@/constants/Colors';
+import { avisar } from '@/.lib/aviso';
 import { rotuloEtapaFeedback } from '@/.lib/feedback';
+import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
+
+type PacienteAdmin = { id: string; nome_completo: string; codigo_pseudonimo: string };
+type MembroEquipe = { id: string; nome: string; papel: string; email: string | null; ativo: boolean };
+
+function confirmar(mensagem: string): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    return Promise.resolve(typeof window !== 'undefined' && window.confirm(mensagem));
+  }
+  return new Promise((resolve) => {
+    Alert.alert('Confirmar', mensagem, [
+      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+      { text: 'Excluir', style: 'destructive', onPress: () => resolve(true) },
+    ]);
+  });
+}
 
 type Indicadores = {
   totalPacientesAtivos: number;
@@ -30,10 +56,21 @@ function CartaoIndicador({ titulo, valor }: { titulo: string; valor: string }) {
 }
 
 export default function TelaAdmin() {
+  const { cores } = useTema();
   const [papel, setPapel] = useState<string | null>(null);
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [resumoFeedback, setResumoFeedback] = useState<ResumoFeedbackEtapa[]>([]);
+  const [pacientes, setPacientes] = useState<PacienteAdmin[]>([]);
+  const [equipe, setEquipe] = useState<MembroEquipe[]>([]);
   const [carregando, setCarregando] = useState(true);
+
+  const [novoNome, setNovoNome] = useState('');
+  const [novoEmail, setNovoEmail] = useState('');
+  const [novoRegistro, setNovoRegistro] = useState('');
+  const [cadastrando, setCadastrando] = useState(false);
+  const [erroEquipe, setErroEquipe] = useState<string | null>(null);
+  const [senhaNovoFisio, setSenhaNovoFisio] = useState<{ email: string; senha: string } | null>(null);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     const { data: usuario } = await supabase.auth.getUser();
@@ -54,13 +91,30 @@ export default function TelaAdmin() {
       return;
     }
 
-    const [{ data: painel }, { data: adesoes }, { data: lesoesResolvidas }, { data: feedbacks }] =
-      await Promise.all([
-        supabase.from('vw_painel_pacientes').select('prioridade'),
-        supabase.from('vw_adesao_exercicios').select('adesao_percentual'),
-        supabase.from('lesoes').select('data_ocorrencia, atualizado_em').neq('status', 'ativa'),
-        supabase.from('feedback_piloto').select('etapa, nota, tempo_gasto_segundos'),
-      ]);
+    const [
+      { data: painel },
+      { data: adesoes },
+      { data: lesoesResolvidas },
+      { data: feedbacks },
+      { data: listaPacientes },
+      { data: listaEquipe },
+    ] = await Promise.all([
+      supabase.from('vw_painel_pacientes').select('prioridade'),
+      supabase.from('vw_adesao_exercicios').select('adesao_percentual'),
+      supabase.from('lesoes').select('data_ocorrencia, atualizado_em').neq('status', 'ativa'),
+      supabase.from('feedback_piloto').select('etapa, nota, tempo_gasto_segundos'),
+      supabase
+        .from('pacientes')
+        .select('id, nome_completo, codigo_pseudonimo')
+        .order('nome_completo', { ascending: true }),
+      supabase
+        .from('profissionais')
+        .select('id, nome, papel, email, ativo')
+        .order('nome', { ascending: true }),
+    ]);
+
+    setPacientes((listaPacientes as PacienteAdmin[]) ?? []);
+    setEquipe((listaEquipe as MembroEquipe[]) ?? []);
 
     const adesoesValidas = (adesoes ?? []).map((a) => a.adesao_percentual).filter((v): v is number => v != null);
     const adesaoMedia =
@@ -115,6 +169,48 @@ export default function TelaAdmin() {
       carregar();
     }, [carregar])
   );
+
+  async function cadastrarFisio() {
+    if (!novoNome.trim() || !novoEmail.trim()) {
+      setErroEquipe('Informe nome e e-mail.');
+      return;
+    }
+    setErroEquipe(null);
+    setSenhaNovoFisio(null);
+    setCadastrando(true);
+    const { data, error } = await supabase.functions.invoke('criar-fisioterapeuta', {
+      body: { nome: novoNome.trim(), email: novoEmail.trim(), registro: novoRegistro.trim() || null },
+    });
+    setCadastrando(false);
+    if (error) {
+      setErroEquipe(error.message);
+      return;
+    }
+    setSenhaNovoFisio({ email: data.email, senha: data.senha_temporaria });
+    setNovoNome('');
+    setNovoEmail('');
+    setNovoRegistro('');
+    carregar();
+  }
+
+  async function excluirPaciente(p: PacienteAdmin) {
+    const ok = await confirmar(
+      `Excluir "${p.nome_completo}" de vez? Isso apaga lesões, fotos, registros, ` +
+        `prescrições, consultas e o acesso ao portal. Não dá para desfazer.`
+    );
+    if (!ok) return;
+    setExcluindo(p.id);
+    const { error } = await supabase.functions.invoke('excluir-paciente', {
+      body: { paciente_id: p.id },
+    });
+    setExcluindo(null);
+    if (error) {
+      avisar(error.message);
+      return;
+    }
+    avisar('Paciente excluído.');
+    carregar();
+  }
 
   if (carregando) {
     return (
@@ -177,6 +273,96 @@ export default function TelaAdmin() {
                 ? ` · Tempo médio: ${Math.floor(r.tempoMedioSegundos / 60)}min ${r.tempoMedioSegundos % 60}s`
                 : ''}
             </Text>
+          </View>
+        ))
+      )}
+
+      {/* ── Equipe ─────────────────────────────────────────────── */}
+      <Text className="text-texto font-semibold mt-8 mb-2">Equipe</Text>
+      {equipe.map((m) => (
+        <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
+          <Text className="text-texto font-semibold">{m.nome}</Text>
+          <Text className="text-secundario text-xs">
+            {m.papel}
+            {m.email ? ` · ${m.email}` : ''}
+            {m.ativo ? '' : ' · inativo'}
+          </Text>
+        </View>
+      ))}
+
+      <View className="bg-superficie border border-borda rounded-xl p-4 mt-1">
+        <Text className="text-texto font-semibold mb-2">Cadastrar fisioterapeuta</Text>
+        <TextInput
+          value={novoNome}
+          onChangeText={setNovoNome}
+          placeholder="Nome completo"
+          placeholderTextColor={cores.secundario}
+          className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
+        />
+        <TextInput
+          value={novoEmail}
+          onChangeText={setNovoEmail}
+          placeholder="E-mail"
+          placeholderTextColor={cores.secundario}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
+        />
+        <TextInput
+          value={novoRegistro}
+          onChangeText={setNovoRegistro}
+          placeholder="Registro no conselho (CREFITO/CRM…) — opcional"
+          placeholderTextColor={cores.secundario}
+          className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
+        />
+        {erroEquipe && <Text className="text-risco mb-2">{erroEquipe}</Text>}
+        <Pressable
+          onPress={cadastrarFisio}
+          disabled={cadastrando}
+          className="bg-primaria rounded-xl py-3 items-center">
+          {cadastrando ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="text-white font-semibold">Cadastrar</Text>
+          )}
+        </Pressable>
+        {senhaNovoFisio && (
+          <View className="border border-ok rounded-xl p-3 mt-3">
+            <Text className="text-texto font-semibold mb-1">Acesso criado!</Text>
+            <Text className="text-secundario text-xs mb-1">Repasse ao novo fisioterapeuta:</Text>
+            <Text selectable className="text-texto text-xs">E-mail: {senhaNovoFisio.email}</Text>
+            <Text selectable className="text-texto text-xs">
+              Senha temporária: {senhaNovoFisio.senha}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Pacientes ──────────────────────────────────────────── */}
+      <Text className="text-texto font-semibold mt-8 mb-2">
+        Pacientes ({pacientes.length})
+      </Text>
+      {pacientes.length === 0 ? (
+        <Text className="text-secundario">Nenhum paciente cadastrado.</Text>
+      ) : (
+        pacientes.map((p) => (
+          <View
+            key={p.id}
+            className="bg-superficie border border-borda rounded-xl p-4 mb-2 flex-row items-center justify-between">
+            <View className="flex-1 pr-3">
+              <Text className="text-texto font-semibold">{p.nome_completo}</Text>
+              <Text className="text-secundario text-xs">{p.codigo_pseudonimo}</Text>
+            </View>
+            <Pressable
+              onPress={() => excluirPaciente(p)}
+              disabled={excluindo === p.id}
+              className="border border-risco rounded-lg px-3 py-2">
+              {excluindo === p.id ? (
+                <ActivityIndicator color={palette.risco} size="small" />
+              ) : (
+                <Text className="text-risco text-xs font-semibold">Excluir</Text>
+              )}
+            </Pressable>
           </View>
         ))
       )}
