@@ -1,9 +1,10 @@
-import { Platform, useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { ITENS_NAV } from '@/components/nav/itens';
 import WebShell from '@/components/nav/WebShell';
+import LogoDermia from '@/components/ui/LogoDermia';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useTema } from '@/.lib/tema';
 
@@ -26,6 +27,11 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: cores.superficie },
         headerTintColor: cores.texto,
         headerShown: mostrarHeader,
+        headerRight: () => (
+          <View style={{ marginRight: 12 }}>
+            <LogoDermia size={22} />
+          </View>
+        ),
       }}>
       {ITENS_NAV.map((item) => (
         <Tabs.Screen
