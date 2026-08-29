@@ -1,0 +1,16 @@
+{
+  // Deploy da web estática do DermIA no Cloudflare (Workers + Static Assets).
+  // Fluxo "Import a repository" no dash → preencher:
+  //   Comando da build       : npx expo export --platform web
+  //   Comando de implantação  : npx wrangler deploy
+  // Domínio próprio: dash do Worker → Settings → Domains & Routes → Add → dermia.tech
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dermia",
+  "compatibility_date": "2025-08-29",
+  "assets": {
+    "directory": "./dist",
+    // Rotas profundas caem no index.html; o expo-router resolve no cliente.
+    // (o dist/ também traz um public/_redirects com a mesma regra.)
+    "not_found_handling": "single-page-application"
+  }
+}

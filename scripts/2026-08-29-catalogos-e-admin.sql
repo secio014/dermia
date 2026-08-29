@@ -159,7 +159,7 @@ create policy "pacientes_admin_delete"
 --    Só insere se ainda não existir item global com o mesmo nome.
 -- ─────────────────────────────────────────────────────────────────────────────
 insert into public.catalogo_medicamentos (clinica_id, nome, apresentacao, via, dose_padrao, frequencia_padrao)
-select v.nome, v.apresentacao, v.via, v.dose_padrao, v.frequencia_padrao
+select null::uuid, v.nome, v.apresentacao, v.via, v.dose_padrao, v.frequencia_padrao
 from (values
   ('Sulfadiazina de prata 1%', 'creme 1%',        'tópica',   'camada fina cobrindo a lesão', '1 a 2x ao dia'),
   ('Colagenase',               'pomada',          'tópica',   'camada fina',                  '1x ao dia'),
