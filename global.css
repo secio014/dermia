@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Rolagem continua funcionando, só a barra fica invisível (web).
+ * Fica aqui além do +html.tsx porque o dev server (`expo start --web`)
+ * não usa o +html.tsx. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/*
+ * Design system DermIA — tema "queimadura".
+ * Fundo rosa quase branco, elementos em tons de vermelho.
+ * Tokens como triplas RGB para o NativeWind aplicar opacidade (<alpha-value>).
+ * Modo escuro: via classe `.dark` que o NativeWind aplica no <html>
+ * (toggle manual em Ajustes + acompanha o sistema quando a preferência é
+ * "system"). O primeiro paint da web usa o @media em app/+html.tsx.
+ */
+
+@layer base {
+  :root {
+    --fundo: 255 245 244;
+    --superficie: 255 255 255;
+    --texto: 43 15 12;
+    --secundario: 138 90 84;
+    --borda: 242 215 211;
+    --primaria: 200 30 58;
+    --primaria-suave: 251 228 228;
+    --ok: 15 157 108;
+    --atencao: 217 119 6;
+    --risco: 176 18 31;
+  }
+
+  .dark:root,
+  :root.dark {
+    --fundo: 26 14 13;
+    --superficie: 36 20 19;
+    --texto: 252 235 233;
+    --secundario: 199 154 148;
+    --borda: 61 35 32;
+    --primaria: 240 84 107;
+    --primaria-suave: 58 26 28;
+    --ok: 52 211 153;
+    --atencao: 251 191 36;
+    --risco: 255 107 107;
+  }
+}

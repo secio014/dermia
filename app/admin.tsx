@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
+import { palette } from '@/constants/Colors';
 import { rotuloEtapaFeedback } from '@/.lib/feedback';
 import { supabase } from '@/.lib/supabase';
 
@@ -118,7 +119,7 @@ export default function TelaAdmin() {
   if (carregando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }

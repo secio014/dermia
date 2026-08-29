@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
+import { palette } from '@/constants/Colors';
 import { obterUrlAssinada } from '@/.lib/foto';
 import {
   gerarECompartilharPDF,
@@ -138,7 +139,7 @@ export default function RelatorioPaciente() {
         disabled={gerando !== null}
         className="bg-superficie border border-borda rounded-xl py-3 items-center">
         {gerando === 'alta' ? (
-          <ActivityIndicator color="#0E5FD8" />
+          <ActivityIndicator color={palette.primaria} />
         ) : (
           <Text className="text-texto font-semibold">Gerar relatório de alta</Text>
         )}

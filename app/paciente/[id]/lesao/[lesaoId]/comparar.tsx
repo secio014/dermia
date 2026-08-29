@@ -84,7 +84,7 @@ export default function ComparadorTemporal() {
   if (carregando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }

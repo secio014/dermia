@@ -3,6 +3,7 @@ import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvolucao';
+import { palette } from '@/constants/Colors';
 import GraficoVancouver, { type PontoVancouver } from '@/components/GraficoVancouver';
 import { obterUrlAssinada } from '@/.lib/foto';
 import { supabase } from '@/.lib/supabase';
@@ -111,7 +112,7 @@ export default function EvolucaoLesao() {
   if (carregando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }
@@ -136,7 +137,7 @@ export default function EvolucaoLesao() {
               <Image source={{ uri: a.urlAssinada }} style={{ width: '100%', height: '100%' }} />
             ) : (
               <View className="flex-1 items-center justify-center">
-                <ActivityIndicator color="#0E5FD8" size="small" />
+                <ActivityIndicator color={palette.primaria} size="small" />
               </View>
             )}
           </Pressable>

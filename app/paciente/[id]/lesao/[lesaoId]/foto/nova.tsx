@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import CameraCapture from '@/components/CameraCapture';
+import { palette } from '@/constants/Colors';
 import { processarEEnviarFoto } from '@/.lib/foto';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
@@ -59,7 +60,7 @@ export default function NovaFoto() {
   if (enviando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center px-8">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
         <Text className="text-secundario text-center mt-4">Enviando foto…</Text>
       </View>
     );

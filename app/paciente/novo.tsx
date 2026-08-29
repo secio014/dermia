@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
+import SeletorData from '@/components/ui/SeletorData';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 
@@ -63,7 +64,7 @@ export default function NovoPaciente() {
   }
 
   return (
-    <View className="flex-1 bg-fundo px-6 pt-6">
+    <View className="flex-1 bg-fundo px-6 pt-6 w-full max-w-2xl self-center">
       <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
       <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
 
@@ -76,13 +77,15 @@ export default function NovoPaciente() {
         className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
       />
 
-      <TextInput
-        value={dataNascimento}
-        onChangeText={setDataNascimento}
-        placeholder="Data de nascimento (AAAA-MM-DD)"
-        placeholderTextColor="#5B6B7F"
-        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
-      />
+      <Text className="text-secundario mb-1">Data de nascimento</Text>
+      <View className="mb-3">
+        <SeletorData
+          valor={dataNascimento}
+          onChange={setDataNascimento}
+          placeholder="Escolher data"
+          opcional
+        />
+      </View>
 
       <Pressable
         onPress={() => setConsentiu((atual) => !atual)}

@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "dermia",
+    "name": "DermIA",
     "slug": "dermia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "dermia",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FFF5F4",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dermia.app",
@@ -18,7 +19,7 @@
       "package": "com.dermia.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFF5F4",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -32,7 +33,15 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "DermIA",
+      "shortName": "DermIA",
+      "description": "Acompanhamento clínico da evolução de queimaduras e lesões de pele.",
+      "lang": "pt-BR",
+      "themeColor": "#C81E3A",
+      "backgroundColor": "#FFF5F4",
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",
@@ -41,7 +50,10 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#FFF5F4",
+          "dark": {
+            "backgroundColor": "#1A0E0D"
+          }
         }
       ],
       [
@@ -50,13 +62,8 @@
           "cameraPermission": "O DermIA usa a câmera para fotografar a evolução das lesões."
         }
       ],
-      [
-        "expo-image-picker",
-        {
-          "photosPermission": "O DermIA usa a galeria para anexar fotos de lesões já existentes."
-        }
-      ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

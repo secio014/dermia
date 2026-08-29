@@ -3,6 +3,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Image, ScrollView, Text, View } from 'react-native';
 
 import ValidacaoIA, { type ResultadoIA } from '@/components/ValidacaoIA';
+import { palette } from '@/constants/Colors';
 import { obterUrlAssinada } from '@/.lib/foto';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
@@ -82,7 +83,7 @@ export default function DetalheAnalise() {
   if (carregando || !analise) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }
@@ -97,7 +98,7 @@ export default function DetalheAnalise() {
         />
       ) : (
         <View className="w-full aspect-square bg-superficie border border-borda rounded-xl mb-4 items-center justify-center">
-          <ActivityIndicator color="#0E5FD8" />
+          <ActivityIndicator color={palette.primaria} />
         </View>
       )}
 

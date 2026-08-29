@@ -64,7 +64,10 @@ validação manual (Aceitar/Editar/Rejeitar) funciona normalmente.
 Nada a fazer no código. Só alinhe com a clínica que a sugestão automática de grau
 entra numa fase seguinte.
 
-### Opção B — ligar o Ollama de verdade
+A tela **Ajustes** do app já mostra "Validação manual" como estado atual, então a
+clínica não fica no escuro enquanto a IA não entra.
+
+### Opção B — ligar o servidor de IA (Ollama num host à parte na internet)
 
 1. Ter uma máquina rodando Ollama com um modelo de visão:
    ```bash
@@ -141,29 +144,35 @@ Clínica instala o app **Expo Go** no celular e escaneia o QR. Limitação: prec
 sua máquina rodando o servidor na mesma rede / com túnel. Bom só para demo, não
 para uso diário.
 
-### Opção B — Web estática (recomendado) — ✅ NO AR
+### Opção B — Web estática (recomendado) — pronta para domínio próprio
 
-Publicado no Netlify: **https://deft-capybara-a49de4.netlify.app/**
-(SPA fallback OK — rota profunda responde 200). Para atualizar: rodar o
-`expo export` de novo e re-arrastar `dist/` em app.netlify.com/drop (ou conectar
-o repo pra deploy automático).
+Existe `netlify.toml` na raiz com `build command`, `publish = dist`, SPA fallback
+e headers de segurança. O jeito recomendado agora é **deploy automático por Git**
+(não mais arrastar `dist/` à mão):
+
+1. app.netlify.com → **Add new site → Import an existing project** → conectar este
+   repositório. O Netlify lê o `netlify.toml` e roda `npx expo export --platform web`
+   a cada push.
+2. Cada `git push` na branch escolhida = novo deploy. Nada de `dist/` no Git
+   (continua no `.gitignore`).
+3. **Domínio próprio:** Site settings → Domain management → **Add a domain**.
+   Registrar o domínio (ex.: no registro.br para `.com.br`, ou Namecheap/Cloudflare)
+   e apontar o DNS conforme o Netlify pedir:
+   - domínio raiz (`dermia.com.br`) → registro `A`/`ALIAS` para o load balancer
+     do Netlify, **ou** usar os nameservers do Netlify;
+   - `www` → registro `CNAME` para `<seu-site>.netlify.app`.
+   HTTPS (Let's Encrypt) o Netlify emite sozinho depois que o DNS propaga.
+
+Para gerar/atualizar o build local (teste ou upload manual em
+[app.netlify.com/drop](https://app.netlify.com/drop)):
 
 ```bash
-npx expo export --platform web    # gera a pasta dist/
+npx expo export --platform web    # gera dist/ (20 rotas), inclui _redirects
 ```
 
-A pasta `dist/` **já foi gerada** (25 rotas, bundle ~2.6 MB) e já inclui um
-`_redirects` (SPA fallback pra rotas dinâmicas não darem 404 no refresh). Para
-regerar depois de mudanças no código, rode o comando de novo. Depois publique
-`dist/` num host grátis com HTTPS:
-
-- **Netlify** (recomendado) → [app.netlify.com/drop](https://app.netlify.com/drop),
-  arrasta a pasta `dist/`. Re-deploy = arrastar de novo.
-- **Cloudflare Pages** → Direct Upload. Mesma ideia, lê o mesmo `_redirects`.
-- **Vercel** → melhor se conectar o repo pra deploy automático a cada push.
-
-A clínica acessa por um link no navegador (desktop ou tablet). Câmera funciona no
-navegador via HTTPS.
+Alternativas com o mesmo `_redirects`/`netlify.toml`: **Cloudflare Pages** (Direct
+Upload ou Git) e **Vercel** (Git). A clínica acessa por um link no navegador
+(desktop ou tablet); câmera funciona no navegador via HTTPS.
 
 ### Opção C — App Android via EAS Build
 
@@ -179,6 +188,12 @@ navegador via HTTPS.
 5. Play Store só se virar produto: conta de dev US$ 25 (única), faixa de Teste Interno.
 6. iOS exige conta Apple Developer (US$ 99/ano) + TestFlight — fora do escopo do piloto.
 7. Plano grátis do EAS: ~30 builds/mês — sobra pro piloto.
+
+> **APK atual no MediaFire está desatualizado.** Depois do redesign (tema
+> vermelho, ícone novo, abas, câmera com botão de virar) é preciso rodar
+> `eas build -p android --profile preview` de novo e re-subir o APK novo no
+> MediaFire (mantém a versão `1.0.0` — o `versionCode` o EAS incrementa sozinho
+> no profile `production`; no `preview` suba manualmente se precisar diferenciar).
 
 ---
 

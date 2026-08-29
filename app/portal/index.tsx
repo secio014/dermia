@@ -2,24 +2,26 @@ import { useCallback, useState } from 'react';
 import { Link, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { palette } from '@/constants/Colors';
+import SecaoHoje from '@/components/portal/SecaoHoje';
+import SecaoEvolucao from '@/components/portal/SecaoEvolucao';
+import SecaoTratamento from '@/components/portal/SecaoTratamento';
 import { supabase } from '@/.lib/supabase';
 
-type Exercicio = {
-  id: string;
-  titulo: string;
-  instrucoes: string | null;
-  video_url: string | null;
-  series: number | null;
-  repeticoes: number | null;
-  frequencia_semanal: number | null;
-};
+type Aba = 'hoje' | 'evolucao' | 'tratamento';
+const ABAS: { id: Aba; rotulo: string }[] = [
+  { id: 'hoje', rotulo: 'Hoje' },
+  { id: 'evolucao', rotulo: 'Evolução' },
+  { id: 'tratamento', rotulo: 'Tratamento' },
+];
 
 export default function PortalPaciente() {
-  const [nome, setNome] = useState<string | null>(null);
-  const [exercicios, setExercicios] = useState<Exercicio[]>([]);
-  const [feitosHoje, setFeitosHoje] = useState<Set<string>>(new Set());
+  const [paciente, setPaciente] = useState<{ id: string; nome: string; desde: string | null } | null>(
+    null
+  );
   const [carregando, setCarregando] = useState(true);
   const [semAcesso, setSemAcesso] = useState(false);
+  const [aba, setAba] = useState<Aba>('hoje');
 
   const carregar = useCallback(async () => {
     const { data: usuario } = await supabase.auth.getUser();
@@ -28,33 +30,18 @@ export default function PortalPaciente() {
       setCarregando(false);
       return;
     }
-
-    const { data: paciente } = await supabase
+    const { data } = await supabase
       .from('pacientes')
-      .select('id, nome_completo')
+      .select('id, nome_completo, criado_em')
       .eq('user_id', usuario.user.id)
       .single();
-
-    if (!paciente) {
+    if (!data) {
       setSemAcesso(true);
       setCarregando(false);
       return;
     }
     setSemAcesso(false);
-    setNome(paciente.nome_completo);
-
-    const hoje = new Date().toISOString().slice(0, 10);
-    const [{ data: e }, { data: execs }] = await Promise.all([
-      supabase
-        .from('exercicios_prescritos')
-        .select('id, titulo, instrucoes, video_url, series, repeticoes, frequencia_semanal')
-        .eq('paciente_id', paciente.id)
-        .eq('ativo', true),
-      supabase.from('execucoes_exercicio').select('exercicio_id, data').eq('data', hoje),
-    ]);
-
-    setExercicios((e as Exercicio[]) ?? []);
-    setFeitosHoje(new Set((execs ?? []).map((x) => x.exercicio_id as string)));
+    setPaciente({ id: data.id, nome: data.nome_completo, desde: data.criado_em ?? null });
     setCarregando(false);
   }, []);
 
@@ -64,22 +51,15 @@ export default function PortalPaciente() {
     }, [carregar])
   );
 
-  async function marcarFeito(exercicioId: string) {
-    const { error } = await supabase.from('execucoes_exercicio').insert({ exercicio_id: exercicioId });
-    if (!error) {
-      setFeitosHoje((atual) => new Set(atual).add(exercicioId));
-    }
-  }
-
   if (carregando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color="#0E5FD8" />
+        <ActivityIndicator color={palette.primaria} />
       </View>
     );
   }
 
-  if (semAcesso) {
+  if (semAcesso || !paciente) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center px-8">
         <Text className="text-texto text-center mb-4">
@@ -87,55 +67,41 @@ export default function PortalPaciente() {
         </Text>
         <Link href="/portal/login" asChild>
           <Pressable className="bg-primaria rounded-xl py-3 px-6 items-center">
-            <Text className="text-superficie font-semibold">Entrar</Text>
+            <Text className="text-white font-semibold">Entrar</Text>
           </Pressable>
         </Link>
       </View>
     );
   }
 
-  const pendentes = exercicios.filter((e) => !feitosHoje.has(e.id));
-
   return (
-    <ScrollView className="flex-1 bg-fundo px-4 pt-6" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Text className="text-texto text-xl font-bold mb-1">Olá, {nome}</Text>
-      <Text className="text-secundario mb-6">Seus exercícios de hoje</Text>
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-6"
+      contentContainerClassName="w-full max-w-2xl self-center"
+      contentContainerStyle={{ paddingBottom: 40 }}>
+      <Text className="text-texto text-2xl font-bold mb-1">Olá, {paciente.nome}</Text>
+      <Text className="text-secundario mb-4">Seu acompanhamento</Text>
 
-      {pendentes.length > 0 && (
-        <View className="bg-atencao/10 border border-atencao rounded-xl p-3 mb-4">
-          <Text className="text-atencao text-xs font-semibold">
-            Você ainda tem {pendentes.length} exercício(s) pendente(s) hoje.
-          </Text>
-        </View>
-      )}
-
-      {exercicios.length === 0 ? (
-        <Text className="text-secundario">Nenhum exercício prescrito no momento.</Text>
-      ) : (
-        exercicios.map((item) => {
-          const feito = feitosHoje.has(item.id);
+      <View className="flex-row bg-superficie border border-borda rounded-xl p-1 mb-5">
+        {ABAS.map((a) => {
+          const ativo = aba === a.id;
           return (
-            <View key={item.id} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
-              <Text className="text-texto font-semibold mb-1">{item.titulo}</Text>
-              {item.instrucoes && <Text className="text-secundario text-xs mb-1">{item.instrucoes}</Text>}
-              <Text className="text-secundario text-xs mb-3">
-                {[item.series && `${item.series} séries`, item.repeticoes && `${item.repeticoes} rep.`]
-                  .filter(Boolean)
-                  .join(' · ')}
-                {item.frequencia_semanal ? ` · ${item.frequencia_semanal}x/semana` : ''}
+            <Pressable
+              key={a.id}
+              onPress={() => setAba(a.id)}
+              className={`flex-1 py-2 rounded-lg items-center ${ativo ? 'bg-primaria' : ''}`}>
+              <Text
+                className={`text-sm font-semibold ${ativo ? 'text-white' : 'text-secundario'}`}>
+                {a.rotulo}
               </Text>
-              <Pressable
-                onPress={() => !feito && marcarFeito(item.id)}
-                disabled={feito}
-                className={`rounded-xl py-2.5 items-center ${feito ? 'bg-ok' : 'bg-primaria'}`}>
-                <Text className="text-superficie font-semibold text-xs">
-                  {feito ? '✓ Feito hoje' : 'Marcar como feito hoje'}
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
           );
-        })
-      )}
+        })}
+      </View>
+
+      {aba === 'hoje' && <SecaoHoje pacienteId={paciente.id} />}
+      {aba === 'evolucao' && <SecaoEvolucao pacienteId={paciente.id} desde={paciente.desde} />}
+      {aba === 'tratamento' && <SecaoTratamento pacienteId={paciente.id} />}
     </ScrollView>
   );
 }
