@@ -78,15 +78,13 @@ export default function NovaPrescricao() {
       <Text className="text-secundario text-xs font-semibold mb-1">REMÉDIO / CURATIVO</Text>
       <View className="mb-3">
         <SeletorCatalogo<MedicamentoCatalogo>
-          titulo="Catálogo de remédios e curativos"
-          placeholder="Escolher do catálogo"
-          textoSelecionado={nome || null}
           itens={catalogo}
           keyItem={(m) => m.id}
           rotuloItem={(m) => m.nome}
           descricaoItem={(m) =>
             [m.apresentacao, m.via, m.dose_padrao].filter(Boolean).join(' · ') || null
           }
+          idSelecionado={catalogoId}
           busca={busca}
           onBusca={setBusca}
           onSelecionar={selecionarDoCatalogo}
@@ -100,6 +98,9 @@ export default function NovaPrescricao() {
             />
           )}
         />
+        {nome ? (
+          <Text className="text-secundario text-xs mt-1">Selecionado: {nome}</Text>
+        ) : null}
       </View>
 
       <TextInput

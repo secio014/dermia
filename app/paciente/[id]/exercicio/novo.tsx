@@ -105,13 +105,11 @@ export default function NovoExercicio() {
       <Text className="text-secundario text-xs font-semibold mb-1">EXERCÍCIO</Text>
       <View className="mb-3">
         <SeletorCatalogo<ExercicioCatalogo>
-          titulo="Catálogo de exercícios"
-          placeholder="Escolher do catálogo"
-          textoSelecionado={titulo || null}
           itens={catalogo}
           keyItem={(e) => e.id}
           rotuloItem={(e) => e.titulo}
           descricaoItem={(e) => e.instrucoes?.slice(0, 80) ?? null}
+          idSelecionado={catalogoId}
           busca={busca}
           onBusca={setBusca}
           onSelecionar={selecionarDoCatalogo}
