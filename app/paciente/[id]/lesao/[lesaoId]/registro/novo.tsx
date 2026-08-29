@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { obterPerfilProfissional } from '@/.lib/perfil';
@@ -109,6 +109,7 @@ export default function NovoRegistro() {
 
   return (
     <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
+      <Stack.Screen options={{ title: 'Novo registro' }} />
       <Text className="text-texto font-semibold mb-2">Adicionar medida de goniometria</Text>
 
       <TextInput

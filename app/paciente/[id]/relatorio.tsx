@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
+import SeletorData from '@/components/ui/SeletorData';
 import { palette } from '@/constants/Colors';
 import { obterUrlAssinada } from '@/.lib/foto';
 import {
@@ -99,24 +100,17 @@ export default function RelatorioPaciente() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-xl self-center"
       contentContainerStyle={{ paddingBottom: 32 }}>
+      <Stack.Screen options={{ title: 'Relatório do paciente' }} />
       <Text className="text-texto text-lg font-bold mb-4">Relatório em PDF</Text>
 
       <Text className="text-secundario text-xs mb-1">Período (opcional)</Text>
       <View className="flex-row gap-3 mb-4">
-        <TextInput
-          value={dataInicio}
-          onChangeText={setDataInicio}
-          placeholder="Início (AAAA-MM-DD)"
-          placeholderTextColor="#5B6B7F"
-          className="flex-1 bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
-        />
-        <TextInput
-          value={dataFim}
-          onChangeText={setDataFim}
-          placeholder="Fim (AAAA-MM-DD)"
-          placeholderTextColor="#5B6B7F"
-          className="flex-1 bg-superficie border border-borda rounded-xl px-4 py-3 text-texto"
-        />
+        <View className="flex-1">
+          <SeletorData valor={dataInicio} onChange={setDataInicio} placeholder="Início" opcional />
+        </View>
+        <View className="flex-1">
+          <SeletorData valor={dataFim} onChange={setDataFim} placeholder="Fim" opcional />
+        </View>
       </View>
 
       <View className="flex-row items-center justify-between bg-superficie border border-borda rounded-xl px-4 py-3 mb-6">

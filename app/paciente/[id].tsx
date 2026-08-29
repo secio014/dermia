@@ -15,6 +15,8 @@ import { palette } from '@/constants/Colors';
 import { GRAUS_CLINICOS } from '@/.lib/scq';
 import { proximaConsulta, type Consulta } from '@/.lib/agenda';
 import { avisar } from '@/.lib/aviso';
+import { montarHtmlPrescricao, gerarECompartilharPDF } from '@/.lib/pdf';
+import { obterPerfilProfissional } from '@/.lib/perfil';
 import { encerrarPrescricao, listarPrescricoes, type Prescricao } from '@/.lib/prescricoes';
 import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
@@ -68,6 +70,7 @@ export default function DetalhePaciente() {
   const [criandoAcesso, setCriandoAcesso] = useState(false);
   const [senhaTemporaria, setSenhaTemporaria] = useState<string | null>(null);
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
 
   const carregar = useCallback(async () => {
     const [{ data: p }, { data: l }, { data: e }, { data: a }, presc, prox] = await Promise.all([
@@ -121,6 +124,37 @@ export default function DetalhePaciente() {
     }
     setSenhaTemporaria(data.senha_temporaria);
     carregar();
+  }
+
+  async function gerarPdfPrescricoes() {
+    if (prescricoes.length === 0) {
+      avisar('Nenhuma prescrição ativa para gerar o PDF.');
+      return;
+    }
+    setGerandoPdf(true);
+    try {
+      const perfil = await obterPerfilProfissional();
+      const { data: prof } = perfil
+        ? await supabase.from('profissionais').select('nome, registro').eq('id', perfil.id).single()
+        : { data: null };
+      const html = montarHtmlPrescricao({
+        profissional: { nome: prof?.nome ?? null, registro: prof?.registro ?? null },
+        paciente: { nome: paciente?.nome_completo ?? null, codigo: paciente?.codigo_pseudonimo ?? null },
+        itens: prescricoes.map((p) => ({
+          nome: p.nome,
+          dose: p.dose,
+          frequencia: p.frequencia,
+          inicio: p.inicio,
+          fim: p.fim,
+          observacoes: p.observacoes,
+        })),
+      });
+      await gerarECompartilharPDF(html);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'Erro ao gerar o PDF.');
+    } finally {
+      setGerandoPdf(false);
+    }
   }
 
   if (carregando) {
@@ -219,6 +253,18 @@ export default function DetalhePaciente() {
           <Text className="text-primaria font-semibold">+ Prescrever</Text>
         </Pressable>
       </Link>
+      {prescricoes.length > 0 && (
+        <Pressable
+          onPress={gerarPdfPrescricoes}
+          disabled={gerandoPdf}
+          className="bg-superficie border border-borda rounded-xl py-3 items-center mt-2">
+          {gerandoPdf ? (
+            <ActivityIndicator color={palette.primaria} />
+          ) : (
+            <Text className="text-texto font-semibold">Gerar PDF da prescrição</Text>
+          )}
+        </Pressable>
+      )}
     </Secao>
   );
 
@@ -256,11 +302,18 @@ export default function DetalhePaciente() {
   );
 
   const botaoRelatorio = (
-    <Link href={`/paciente/${id}/relatorio`} asChild>
-      <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mb-6">
-        <Text className="text-texto font-semibold">Gerar relatório em PDF</Text>
-      </Pressable>
-    </Link>
+    <View className="mb-6">
+      <Link href={`/paciente/${id}/relatorio`} asChild>
+        <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center">
+          <Text className="text-texto font-semibold">Gerar relatório em PDF</Text>
+        </Pressable>
+      </Link>
+      <Link href={`/paciente/${id}/atestado/novo`} asChild>
+        <Pressable className="bg-superficie border border-borda rounded-xl py-3 items-center mt-2">
+          <Text className="text-texto font-semibold">Emitir atestado</Text>
+        </Pressable>
+      </Link>
+    </View>
   );
 
   const secaoPortal = (

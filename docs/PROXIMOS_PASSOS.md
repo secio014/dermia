@@ -103,15 +103,19 @@ fisioterapeuta comum — o mínimo para testar o isolamento.
 
 ### 4.2. Ligar a tela de login
 
-Edite `.lib/dev.ts`:
+Feito: `.lib/dev.ts` agora usa `export const LOGIN_DESATIVADO = __DEV__;`.
 
-```ts
-export const LOGIN_DESATIVADO = false;
-```
+- No `expo start` (dev) `__DEV__` é `true` → continua entrando sozinho como
+  `teste@dermia.local`, sem atrito no desenvolvimento.
+- No `expo export` / build EAS `__DEV__` é `false` → `app/_layout.tsx` renderiza
+  `<Auth />` quando não há sessão e `.lib/useSessao.ts` para de logar sozinho.
 
-Só isso já faz `app/_layout.tsx` voltar a renderizar `<Auth />` quando não há
-sessão, e `.lib/useSessao.ts` para de logar sozinho. (Limpeza opcional depois:
+Para forçar login também no dev, troque por `= false`. (Limpeza opcional depois:
 apagar `.lib/dev.ts` e remover os `import`/guards em `_layout.tsx` e `useSessao.ts`.)
+
+> ⚠️ Antes do primeiro build de produção, garanta que existe um profissional real
+> com senha (via `scripts/onboarding-clinica.sql` ou o cadastro no painel de
+> Admin) — senão ninguém entra.
 
 ### 4.3. Testar
 

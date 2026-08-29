@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Image, ScrollView, Text, View } from 'react-native';
 
 import ValidacaoIA, { type ResultadoIA } from '@/components/ValidacaoIA';
@@ -90,6 +90,7 @@ export default function DetalheAnalise() {
 
   return (
     <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
+      <Stack.Screen options={{ title: 'Foto da lesão' }} />
       {urlFoto ? (
         <Image
           source={{ uri: urlFoto }}

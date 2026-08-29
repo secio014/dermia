@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
@@ -67,6 +67,7 @@ export default function NovoPaciente() {
 
   return (
     <View className="flex-1 bg-fundo px-6 pt-6 w-full max-w-2xl self-center">
+      <Stack.Screen options={{ title: 'Novo paciente' }} />
       <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
       <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
 
