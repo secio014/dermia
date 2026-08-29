@@ -90,7 +90,7 @@ export default function DetalheAnalise() {
 
   return (
     <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Stack.Screen options={{ title: 'Foto da lesão' }} />
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       {urlFoto ? (
         <Image
           source={{ uri: urlFoto }}

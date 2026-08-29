@@ -87,6 +87,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             contentStyle: { backgroundColor: paletas[esquema].fundo },
+            headerTitle: 'Derm.IA',
             headerRight: () => (
               <View style={{ marginRight: 4 }}>
                 <LogoDermia size={22} />
@@ -94,12 +95,9 @@ export default function RootLayout() {
             ),
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="admin" options={{ presentation: 'modal', title: 'Painel de Admin' }} />
-          <Stack.Screen
-            name="consulta/nova"
-            options={{ presentation: 'modal', title: 'Nova consulta' }}
-          />
-          <Stack.Screen name="consulta/[id]" options={{ title: 'Consulta' }} />
+          <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="consulta/nova" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="consulta/[id]" />
         </Stack>
         <Aviso />
       </View>

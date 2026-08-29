@@ -145,7 +145,7 @@ export default function NovaLesao() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
       contentContainerStyle={{ paddingBottom: 32 }}>
-      <Stack.Screen options={{ title: 'Nova lesão' }} />
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       {largo ? (
         <View className="flex-row gap-6">
           <View className="flex-1">{blocoMapa}</View>

@@ -109,7 +109,7 @@ export default function NovoRegistro() {
 
   return (
     <ScrollView className="flex-1 bg-fundo px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
-      <Stack.Screen options={{ title: 'Novo registro' }} />
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       <Text className="text-texto font-semibold mb-2">Adicionar medida de goniometria</Text>
 
       <TextInput

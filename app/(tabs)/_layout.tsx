@@ -27,6 +27,7 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: cores.superficie },
         headerTintColor: cores.texto,
         headerShown: mostrarHeader,
+        headerTitle: 'Derm.IA',
         headerRight: () => (
           <View style={{ marginRight: 12 }}>
             <LogoDermia size={22} />
@@ -39,7 +40,7 @@ export default function TabLayout() {
           name={item.nome}
           options={{
             title: item.titulo,
-            headerTitle: item.nome === 'index' ? 'Derm.IA' : item.titulo,
+            headerTitle: 'Derm.IA',
             tabBarIcon: ({ color }) => <Ionicons name={item.icone} size={24} color={color} />,
           }}
         />

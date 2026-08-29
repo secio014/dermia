@@ -100,7 +100,7 @@ export default function RelatorioPaciente() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-xl self-center"
       contentContainerStyle={{ paddingBottom: 32 }}>
-      <Stack.Screen options={{ title: 'Relatório do paciente' }} />
+      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       <Text className="text-texto text-lg font-bold mb-4">Relatório em PDF</Text>
 
       <Text className="text-secundario text-xs mb-1">Período (opcional)</Text>
