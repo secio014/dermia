@@ -7,15 +7,19 @@
 // Deploy: supabase functions deploy criar-acesso-paciente
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { json, preflight } from '../_shared/cors.ts';
 
 function gerarSenhaTemporaria(): string {
   return Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 6).toUpperCase();
 }
 
 Deno.serve(async (req) => {
+  const pre = preflight(req);
+  if (pre) return pre;
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Não autenticado.' }), { status: 401 });
+    return json({ error: 'Não autenticado.' }, 401);
   }
 
   const supabaseUsuario = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -23,14 +27,12 @@ Deno.serve(async (req) => {
   });
   const { data: usuario } = await supabaseUsuario.auth.getUser();
   if (!usuario.user) {
-    return new Response(JSON.stringify({ error: 'Sessão inválida.' }), { status: 401 });
+    return json({ error: 'Sessão inválida.' }, 401);
   }
 
   const { paciente_id, email } = await req.json();
   if (!paciente_id || !email) {
-    return new Response(JSON.stringify({ error: 'paciente_id e email são obrigatórios.' }), {
-      status: 400,
-    });
+    return json({ error: 'paciente_id e email são obrigatórios.' }, 400);
   }
 
   const supabaseAdmin = createClient(
@@ -46,14 +48,10 @@ Deno.serve(async (req) => {
     .eq('id', paciente_id)
     .single();
   if (erroPaciente || !paciente) {
-    return new Response(JSON.stringify({ error: 'Paciente não encontrado ou sem permissão.' }), {
-      status: 404,
-    });
+    return json({ error: 'Paciente não encontrado ou sem permissão.' }, 404);
   }
   if (paciente.user_id) {
-    return new Response(JSON.stringify({ error: 'Este paciente já tem acesso ao portal.' }), {
-      status: 409,
-    });
+    return json({ error: 'Este paciente já tem acesso ao portal.' }, 409);
   }
 
   const senhaTemporaria = gerarSenhaTemporaria();
@@ -63,9 +61,7 @@ Deno.serve(async (req) => {
     email_confirm: true,
   });
   if (erroCriacao || !novoUsuario.user) {
-    return new Response(JSON.stringify({ error: erroCriacao?.message ?? 'Falha ao criar usuário.' }), {
-      status: 500,
-    });
+    return json({ error: erroCriacao?.message ?? 'Falha ao criar usuário.' }, 500);
   }
 
   const { error: erroVinculo } = await supabaseAdmin
@@ -73,8 +69,8 @@ Deno.serve(async (req) => {
     .update({ user_id: novoUsuario.user.id })
     .eq('id', paciente_id);
   if (erroVinculo) {
-    return new Response(JSON.stringify({ error: erroVinculo.message }), { status: 500 });
+    return json({ error: erroVinculo.message }, 500);
   }
 
-  return new Response(JSON.stringify({ email, senha_temporaria: senhaTemporaria }), { status: 200 });
+  return json({ email, senha_temporaria: senhaTemporaria }, 200);
 });

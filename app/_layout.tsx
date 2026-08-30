@@ -19,6 +19,7 @@ import '../global.css';
 
 import Auth from '@/components/Auth';
 import Aviso from '@/components/ui/Aviso';
+import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { paletas, palette } from '@/constants/Colors';
 import { instalarFonteInter } from '@/.lib/fonte';
@@ -89,7 +90,8 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: paletas[esquema].fundo },
             headerTitle: 'Derm.IA',
             headerRight: () => (
-              <View style={{ marginRight: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 4 }}>
+                <BotaoTema size={20} />
                 <LogoDermia size={22} />
               </View>
             ),

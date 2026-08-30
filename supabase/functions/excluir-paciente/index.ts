@@ -7,11 +7,15 @@
 // Deploy: supabase functions deploy excluir-paciente
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { json, preflight } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const pre = preflight(req);
+  if (pre) return pre;
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Não autenticado.' }), { status: 401 });
+    return json({ error: 'Não autenticado.' }, 401);
   }
 
   const supabaseUsuario = createClient(
@@ -22,7 +26,7 @@ Deno.serve(async (req) => {
 
   const { data: usuario } = await supabaseUsuario.auth.getUser();
   if (!usuario.user) {
-    return new Response(JSON.stringify({ error: 'Sessão inválida.' }), { status: 401 });
+    return json({ error: 'Sessão inválida.' }, 401);
   }
 
   const { data: perfil } = await supabaseUsuario
@@ -31,14 +35,12 @@ Deno.serve(async (req) => {
     .eq('id', usuario.user.id)
     .single();
   if (perfil?.papel !== 'admin') {
-    return new Response(JSON.stringify({ error: 'Ação restrita a administradores.' }), {
-      status: 403,
-    });
+    return json({ error: 'Ação restrita a administradores.' }, 403);
   }
 
   const { paciente_id } = await req.json();
   if (!paciente_id) {
-    return new Response(JSON.stringify({ error: 'paciente_id é obrigatório.' }), { status: 400 });
+    return json({ error: 'paciente_id é obrigatório.' }, 400);
   }
 
   // Confere que o admin enxerga esse paciente (RLS com a sessão do usuário).
@@ -48,9 +50,7 @@ Deno.serve(async (req) => {
     .eq('id', paciente_id)
     .single();
   if (erroPaciente || !paciente) {
-    return new Response(JSON.stringify({ error: 'Paciente não encontrado ou sem permissão.' }), {
-      status: 404,
-    });
+    return json({ error: 'Paciente não encontrado ou sem permissão.' }, 404);
   }
 
   const supabaseAdmin = createClient(
@@ -87,8 +87,8 @@ Deno.serve(async (req) => {
     .delete()
     .eq('id', paciente_id);
   if (erroDelete) {
-    return new Response(JSON.stringify({ error: erroDelete.message }), { status: 500 });
+    return json({ error: erroDelete.message }, 500);
   }
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  return json({ ok: true }, 200);
 });

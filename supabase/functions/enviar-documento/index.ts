@@ -11,11 +11,15 @@
 // Deploy: supabase functions deploy enviar-documento
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { json, preflight } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const pre = preflight(req);
+  if (pre) return pre;
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Não autenticado.' }), { status: 401 });
+    return json({ error: 'Não autenticado.' }, 401);
   }
 
   const supabaseUsuario = createClient(
@@ -26,14 +30,12 @@ Deno.serve(async (req) => {
 
   const { data: usuario } = await supabaseUsuario.auth.getUser();
   if (!usuario.user) {
-    return new Response(JSON.stringify({ error: 'Sessão inválida.' }), { status: 401 });
+    return json({ error: 'Sessão inválida.' }, 401);
   }
 
   const { paciente_id, assunto, html } = await req.json();
   if (!paciente_id || !html) {
-    return new Response(JSON.stringify({ error: 'paciente_id e html são obrigatórios.' }), {
-      status: 400,
-    });
+    return json({ error: 'paciente_id e html são obrigatórios.' }, 400);
   }
 
   const { data: paciente, error: erroPaciente } = await supabaseUsuario
@@ -42,25 +44,18 @@ Deno.serve(async (req) => {
     .eq('id', paciente_id)
     .single();
   if (erroPaciente || !paciente) {
-    return new Response(JSON.stringify({ error: 'Paciente não encontrado ou sem permissão.' }), {
-      status: 404,
-    });
+    return json({ error: 'Paciente não encontrado ou sem permissão.' }, 404);
   }
   if (!paciente.email) {
-    return new Response(
-      JSON.stringify({ error: 'Este paciente não tem e-mail cadastrado.' }),
-      { status: 400 }
-    );
+    return json({ error: 'Este paciente não tem e-mail cadastrado.' }, 400);
   }
 
   const apiKey = Deno.env.get('RESEND_API_KEY');
   const remetente = Deno.env.get('EMAIL_REMETENTE');
   if (!apiKey || !remetente) {
-    return new Response(
-      JSON.stringify({
-        error: 'Envio de e-mail ainda não configurado (RESEND_API_KEY / EMAIL_REMETENTE).',
-      }),
-      { status: 503 }
+    return json(
+      { error: 'Envio de e-mail ainda não configurado (RESEND_API_KEY / EMAIL_REMETENTE).' },
+      503
     );
   }
 
@@ -80,10 +75,8 @@ Deno.serve(async (req) => {
 
   if (!resposta.ok) {
     const detalhe = await resposta.text();
-    return new Response(JSON.stringify({ error: `Falha no envio: ${detalhe}` }), {
-      status: 502,
-    });
+    return json({ error: `Falha no envio: ${detalhe}` }, 502);
   }
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  return json({ ok: true }, 200);
 });

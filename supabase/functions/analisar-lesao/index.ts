@@ -19,6 +19,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
+import { json, preflight } from '../_shared/cors.ts';
 
 // analises_ia.confianca tem check constraint 0-1 (fração, não percentual).
 const ResultadoOllama = z.object({
@@ -28,6 +29,9 @@ const ResultadoOllama = z.object({
 });
 
 Deno.serve(async (req) => {
+  const pre = preflight(req);
+  if (pre) return pre;
+
   const inicio = Date.now();
   const { analise_id } = await req.json();
 
@@ -41,7 +45,7 @@ Deno.serve(async (req) => {
       .from('analises_ia')
       .update({ status: 'erro', erro_mensagem: mensagem })
       .eq('id', analise_id);
-    return new Response(JSON.stringify({ error: mensagem }), { status: 200 });
+    return json({ error: mensagem }, 200);
   };
 
   const ollamaHost = Deno.env.get('OLLAMA_HOST');
@@ -103,7 +107,7 @@ Deno.serve(async (req) => {
       })
       .eq('id', analise_id);
 
-    return new Response(JSON.stringify({ ok: true, resultado }), { status: 200 });
+    return json({ ok: true, resultado }, 200);
   } catch (erro) {
     return marcarErro(erro instanceof Error ? erro.message : 'Erro desconhecido ao chamar o Ollama.');
   }

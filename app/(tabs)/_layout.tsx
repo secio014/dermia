@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 
 import { ITENS_NAV } from '@/components/nav/itens';
 import WebShell from '@/components/nav/WebShell';
+import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useTema } from '@/.lib/tema';
@@ -29,7 +30,8 @@ export default function TabLayout() {
         headerShown: mostrarHeader,
         headerTitle: 'Derm.IA',
         headerRight: () => (
-          <View style={{ marginRight: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+            <BotaoTema size={20} />
             <LogoDermia size={22} />
           </View>
         ),

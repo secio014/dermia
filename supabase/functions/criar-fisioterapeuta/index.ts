@@ -7,6 +7,7 @@
 // Deploy: supabase functions deploy criar-fisioterapeuta
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { json, preflight } from '../_shared/cors.ts';
 
 function gerarSenhaTemporaria(): string {
   return (
@@ -16,9 +17,12 @@ function gerarSenhaTemporaria(): string {
 }
 
 Deno.serve(async (req) => {
+  const pre = preflight(req);
+  if (pre) return pre;
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'Não autenticado.' }), { status: 401 });
+    return json({ error: 'Não autenticado.' }, 401);
   }
 
   const supabaseUsuario = createClient(
@@ -29,7 +33,7 @@ Deno.serve(async (req) => {
 
   const { data: usuario } = await supabaseUsuario.auth.getUser();
   if (!usuario.user) {
-    return new Response(JSON.stringify({ error: 'Sessão inválida.' }), { status: 401 });
+    return json({ error: 'Sessão inválida.' }, 401);
   }
 
   const { data: admin } = await supabaseUsuario
@@ -38,16 +42,12 @@ Deno.serve(async (req) => {
     .eq('id', usuario.user.id)
     .single();
   if (admin?.papel !== 'admin') {
-    return new Response(JSON.stringify({ error: 'Ação restrita a administradores.' }), {
-      status: 403,
-    });
+    return json({ error: 'Ação restrita a administradores.' }, 403);
   }
 
   const { nome, email, registro } = await req.json();
   if (!nome || !email) {
-    return new Response(JSON.stringify({ error: 'nome e email são obrigatórios.' }), {
-      status: 400,
-    });
+    return json({ error: 'nome e email são obrigatórios.' }, 400);
   }
 
   const supabaseAdmin = createClient(
@@ -63,10 +63,7 @@ Deno.serve(async (req) => {
     user_metadata: { nome },
   });
   if (erroCriacao || !novo.user) {
-    return new Response(
-      JSON.stringify({ error: erroCriacao?.message ?? 'Falha ao criar usuário.' }),
-      { status: 500 }
-    );
+    return json({ error: erroCriacao?.message ?? 'Falha ao criar usuário.' }, 500);
   }
 
   // Upsert: cobre o caso de um trigger já ter criado uma linha mínima.
@@ -85,10 +82,8 @@ Deno.serve(async (req) => {
   if (erroPerfil) {
     // desfaz o usuário órfão pra não travar uma segunda tentativa
     await supabaseAdmin.auth.admin.deleteUser(novo.user.id).catch(() => {});
-    return new Response(JSON.stringify({ error: erroPerfil.message }), { status: 500 });
+    return json({ error: erroPerfil.message }, 500);
   }
 
-  return new Response(JSON.stringify({ email, senha_temporaria: senhaTemporaria }), {
-    status: 200,
-  });
+  return json({ email, senha_temporaria: senhaTemporaria }, 200);
 });
