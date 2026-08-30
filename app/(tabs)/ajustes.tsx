@@ -29,7 +29,9 @@ export default function TelaAjustes() {
   const canal = Updates.channel ?? 'desenvolvimento';
 
   return (
-    <ScrollView className="flex-1 bg-fundo" contentContainerClassName="p-4">
+    <ScrollView
+      className="flex-1 bg-fundo"
+      contentContainerClassName="w-full max-w-2xl self-center p-4">
       <Text className="text-texto text-2xl font-bold mb-6">Ajustes</Text>
 
       <Secao titulo="Aparência">

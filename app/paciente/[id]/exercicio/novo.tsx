@@ -99,7 +99,7 @@ export default function NovoExercicio() {
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-2xl self-center"
-      contentContainerStyle={{ paddingBottom: 32 }}>
+      contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
 
       <Text className="text-secundario text-xs font-semibold mb-1">EXERCÍCIO</Text>

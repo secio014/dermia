@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router, Stack } from 'expo-router';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
 import { avisar } from '@/.lib/aviso';
@@ -68,7 +68,11 @@ export default function NovoPaciente() {
   }
 
   return (
-    <View className="flex-1 bg-fundo px-6 pt-6 w-full max-w-2xl self-center">
+    <ScrollView
+      className="flex-1 bg-fundo px-4 pt-4"
+      contentContainerClassName="w-full max-w-2xl self-center"
+      contentContainerStyle={{ paddingBottom: 40 }}
+      keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
       <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
       <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
@@ -134,6 +138,6 @@ export default function NovoPaciente() {
           <Text className="text-superficie font-semibold">Salvar paciente</Text>
         )}
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
