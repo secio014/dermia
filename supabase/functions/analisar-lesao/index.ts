@@ -4,6 +4,7 @@
 //
 // Contrato do servidor externo:
 //   POST {OLLAMA_HOST}/api/generate
+//   header: Authorization: Bearer {OLLAMA_TOKEN}  (se o secret estiver setado)
 //   body: { model, prompt, images: [base64], format: "json", stream: false }
 //   resposta esperada: { response: "<JSON string>" }, onde o JSON casa com
 //   ResultadoOllama abaixo ({ grau_sugerido, confianca 0-1, observacao? }).
@@ -14,8 +15,10 @@
 // Deploy: supabase functions deploy analisar-lesao
 // Variáveis necessárias (supabase secrets set ...):
 //   OLLAMA_HOST   ex: https://ia.seu-dominio.com  (precisa ser público/HTTPS)
-//   OLLAMA_MODELO ex: llama3.2-vision
+//   OLLAMA_MODELO ex: qwen2.5vl  (opcional, default abaixo)
+//   OLLAMA_TOKEN  token Bearer exigido pelo proxy (opcional mas recomendado)
 // SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY já são injetadas automaticamente.
+// Setup do VPS: docs/OLLAMA_VPS.md
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
@@ -48,8 +51,9 @@ Deno.serve(async (req) => {
     return json({ error: mensagem }, 200);
   };
 
-  const ollamaHost = Deno.env.get('OLLAMA_HOST');
-  const ollamaModelo = Deno.env.get('OLLAMA_MODELO') ?? 'llama3.2-vision';
+  const ollamaHost = Deno.env.get('OLLAMA_HOST')?.replace(/\/+$/, '');
+  const ollamaModelo = Deno.env.get('OLLAMA_MODELO') ?? 'qwen2.5vl';
+  const ollamaToken = Deno.env.get('OLLAMA_TOKEN');
   if (!ollamaHost) {
     return marcarErro('OLLAMA_HOST não configurado — configure o secret e faça o deploy de novo.');
   }
@@ -75,7 +79,10 @@ Deno.serve(async (req) => {
   try {
     const respostaOllama = await fetch(`${ollamaHost}/api/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(ollamaToken ? { Authorization: `Bearer ${ollamaToken}` } : {}),
+      },
       body: JSON.stringify({
         model: ollamaModelo,
         prompt:
