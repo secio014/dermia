@@ -24,6 +24,9 @@ import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
+// Endereço do portal do paciente (app web publicado). Vai no e-mail de acesso.
+const URL_PORTAL = 'https://dermia.tech/portal/login';
+
 type Paciente = {
   id: string;
   nome_completo: string;
@@ -79,6 +82,7 @@ export default function DetalhePaciente() {
   const [criandoAcesso, setCriandoAcesso] = useState(false);
   const [senhaTemporaria, setSenhaTemporaria] = useState<string | null>(null);
   const [erroAcesso, setErroAcesso] = useState<string | null>(null);
+  const [enviandoAcesso, setEnviandoAcesso] = useState(false);
   const [prescAcao, setPrescAcao] = useState<'pdf' | 'email' | null>(null);
 
   const carregar = useCallback(async () => {
@@ -144,6 +148,37 @@ export default function DetalhePaciente() {
     // Guarda o e-mail também em pacientes.email (usado para enviar documentos).
     supabase.from('pacientes').update({ email: emailPortal.trim() }).eq('id', id).then(() => {});
     carregar();
+  }
+
+  const textoCredenciais = () =>
+    `Acesse o Portal do Paciente DermIA:\n${URL_PORTAL}\n\n` +
+    `E-mail: ${emailPortal}\nSenha temporária: ${senhaTemporaria}\n\n` +
+    `Na primeira vez, recomendamos trocar a senha.`;
+
+  // Envia e-mail/senha + link do portal para o próprio paciente, pela mesma
+  // edge function usada nos documentos (Resend). Requer pacientes.email salvo,
+  // o que `criarAcessoPortal` acabou de fazer.
+  async function enviarCredenciaisPorEmail() {
+    if (!senhaTemporaria) return;
+    setEnviandoAcesso(true);
+    const html = `
+      <div style="font-family:system-ui,Arial,sans-serif;font-size:14px;color:#2B0F0C;line-height:1.6">
+        <h2 style="color:#C81E3A;margin:0 0 12px">Seu acesso ao Portal do Paciente</h2>
+        <p>Olá${paciente?.nome_completo ? `, ${paciente.nome_completo}` : ''}. Sua clínica criou seu acesso ao portal de acompanhamento.</p>
+        <p style="margin:16px 0">
+          <a href="${URL_PORTAL}" style="background:#C81E3A;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Abrir o portal</a>
+        </p>
+        <p><strong>E-mail:</strong> ${emailPortal}<br/>
+           <strong>Senha temporária:</strong> ${senhaTemporaria}</p>
+        <p style="color:#8A5A54">Endereço: ${URL_PORTAL}<br/>Recomendamos trocar a senha no primeiro acesso.</p>
+      </div>`;
+    const { error } = await enviarDocumentoPorEmail({
+      pacienteId: id,
+      assunto: 'Seu acesso ao Portal do Paciente — DermIA',
+      html,
+    });
+    setEnviandoAcesso(false);
+    avisar(error ?? 'E-mail com o acesso enviado ao paciente.');
   }
 
   async function emitirPrescricao(destino: 'pdf' | 'email') {
@@ -377,27 +412,67 @@ export default function DetalhePaciente() {
   const secaoPortal = (
     <Secao titulo="Acesso ao portal do paciente">
         {paciente?.user_id ? (
-          <View className="bg-superficie border border-ok rounded-xl p-4 flex-row items-center gap-2">
-            <Ionicons name="checkmark-circle" size={18} color={palette.ok} />
-            <Text className="text-ok font-semibold text-xs">Paciente já tem acesso ao portal.</Text>
+          <View className="bg-superficie border border-ok rounded-xl p-4">
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons name="checkmark-circle" size={18} color={palette.ok} />
+              <Text className="text-ok font-semibold text-xs">Paciente já tem acesso ao portal.</Text>
+            </View>
+            <Text selectable className="text-secundario text-xs">Portal: {URL_PORTAL}</Text>
+            <Pressable
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  navigator.clipboard?.writeText(URL_PORTAL);
+                  avisar('Link do portal copiado.');
+                } else {
+                  Linking.openURL(URL_PORTAL);
+                }
+              }}
+              className="mt-2">
+              <Text className="text-primaria text-xs font-semibold">
+                {Platform.OS === 'web' ? 'Copiar link' : 'Abrir link'}
+              </Text>
+            </Pressable>
           </View>
         ) : senhaTemporaria ? (
           <View className="bg-superficie border border-ok rounded-xl p-4">
             <Text className="text-texto font-semibold mb-1">Acesso criado!</Text>
-            <Text className="text-secundario text-xs mb-2">Repasse esses dados ao paciente:</Text>
+            <Text className="text-secundario text-xs mb-2">
+              Envie ao paciente o link e as credenciais abaixo. A senha só aparece agora.
+            </Text>
+            <Text selectable className="text-texto text-xs">Portal: {URL_PORTAL}</Text>
             <Text selectable className="text-texto text-xs">E-mail: {emailPortal}</Text>
             <Text selectable className="text-texto text-xs">Senha temporária: {senhaTemporaria}</Text>
-            {Platform.OS === 'web' && (
+
+            <View className="flex-row gap-2 mt-3">
               <Pressable
-                onPress={() =>
-                  navigator.clipboard?.writeText(
-                    `E-mail: ${emailPortal}\nSenha: ${senhaTemporaria}`
-                  )
-                }
-                className="mt-2">
-                <Text className="text-primaria text-xs font-semibold">Copiar</Text>
+                onPress={enviarCredenciaisPorEmail}
+                disabled={enviandoAcesso}
+                className="flex-1 bg-primaria rounded-xl py-2.5 items-center">
+                {enviandoAcesso ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white font-semibold text-xs">Enviar por e-mail ao paciente</Text>
+                )}
               </Pressable>
-            )}
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    navigator.clipboard?.writeText(textoCredenciais());
+                    avisar('Link e credenciais copiados.');
+                  } else {
+                    Linking.openURL(
+                      `mailto:${emailPortal}?subject=${encodeURIComponent(
+                        'Seu acesso ao Portal do Paciente — DermIA'
+                      )}&body=${encodeURIComponent(textoCredenciais())}`
+                    );
+                  }
+                }}
+                className="bg-superficie border border-borda rounded-xl py-2.5 px-3 items-center">
+                <Text className="text-texto font-semibold text-xs">
+                  {Platform.OS === 'web' ? 'Copiar' : 'Compartilhar'}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         ) : (
           <View>

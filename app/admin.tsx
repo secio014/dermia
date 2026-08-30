@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
 import { avisar } from '@/.lib/aviso';
 import { rotuloEtapaFeedback } from '@/.lib/feedback';
@@ -56,8 +57,15 @@ function CartaoIndicador({ titulo, valor }: { titulo: string; valor: string }) {
 }
 
 export default function TelaAdmin() {
+  return (
+    <Protegido permissao="painel_admin">
+      <PainelAdmin />
+    </Protegido>
+  );
+}
+
+function PainelAdmin() {
   const { cores } = useTema();
-  const [papel, setPapel] = useState<string | null>(null);
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [resumoFeedback, setResumoFeedback] = useState<ResumoFeedbackEtapa[]>([]);
   const [pacientes, setPacientes] = useState<PacienteAdmin[]>([]);
@@ -75,18 +83,6 @@ export default function TelaAdmin() {
   const carregar = useCallback(async () => {
     const { data: usuario } = await supabase.auth.getUser();
     if (!usuario.user) {
-      setCarregando(false);
-      return;
-    }
-
-    const { data: perfil } = await supabase
-      .from('profissionais')
-      .select('papel')
-      .eq('id', usuario.user.id)
-      .single();
-    setPapel(perfil?.papel ?? null);
-
-    if (perfil?.papel !== 'admin') {
       setCarregando(false);
       return;
     }
@@ -171,15 +167,25 @@ export default function TelaAdmin() {
   );
 
   async function cadastrarFisio() {
-    if (!novoNome.trim() || !novoEmail.trim()) {
-      setErroEquipe('Informe nome e e-mail.');
+    const nome = novoNome.trim();
+    const email = novoEmail.trim().toLowerCase();
+    if (nome.length < 2) {
+      setErroEquipe('Informe o nome completo do fisioterapeuta.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErroEquipe('Informe um e-mail válido.');
+      return;
+    }
+    if (equipe.some((m) => (m.email ?? '').toLowerCase() === email)) {
+      setErroEquipe('Já existe um membro da equipe com esse e-mail.');
       return;
     }
     setErroEquipe(null);
     setSenhaNovoFisio(null);
     setCadastrando(true);
     const { data, error } = await supabase.functions.invoke('criar-fisioterapeuta', {
-      body: { nome: novoNome.trim(), email: novoEmail.trim(), registro: novoRegistro.trim() || null },
+      body: { nome, email, registro: novoRegistro.trim() || null },
     });
     setCadastrando(false);
     if (error) {
@@ -216,16 +222,6 @@ export default function TelaAdmin() {
     return (
       <View className="flex-1 bg-fundo items-center justify-center">
         <ActivityIndicator color={palette.primaria} />
-      </View>
-    );
-  }
-
-  if (papel !== 'admin') {
-    return (
-      <View className="flex-1 bg-fundo items-center justify-center px-8">
-        <Text className="text-texto text-center">
-          Este painel é restrito a administradores da clínica.
-        </Text>
       </View>
     );
   }

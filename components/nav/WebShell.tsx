@@ -7,6 +7,7 @@ import { Animated, Pressable, Text, View } from 'react-native';
 import { ITENS_NAV } from '@/components/nav/itens';
 import WebFooter from '@/components/nav/WebFooter';
 import LogoDermia from '@/components/ui/LogoDermia';
+import { ehAdmin, usePerfilAtual } from '@/.lib/acesso';
 import { useTema } from '@/.lib/tema';
 
 const CHAVE_MENU = 'dermia:menu-aberto';
@@ -22,6 +23,7 @@ export default function WebShell() {
   const pathname = usePathname();
   const router = useRouter();
   const { cores, preferencia, escolher } = useTema();
+  const { perfil } = usePerfilAtual();
   const [aberto, setAberto] = useState(true);
   const larguraAnim = useRef(new Animated.Value(LARGURA_ABERTA)).current;
 
@@ -96,6 +98,17 @@ export default function WebShell() {
               />
             );
           })}
+
+          {ehAdmin(perfil) && (
+            <ItemBarra
+              icone="shield-checkmark-outline"
+              rotulo="Admin"
+              aberto={aberto}
+              ativo={pathname.startsWith('/admin')}
+              cores={cores}
+              onPress={() => router.push('/admin')}
+            />
+          )}
         </View>
 
         {aberto ? (

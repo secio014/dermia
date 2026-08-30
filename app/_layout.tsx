@@ -3,6 +3,7 @@ import {
   DefaultTheme,
   Stack,
   ThemeProvider,
+  useSegments,
   type Theme,
 } from 'expo-router';
 import {
@@ -21,7 +22,9 @@ import Auth from '@/components/Auth';
 import Aviso from '@/components/ui/Aviso';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
+import SemAcesso from '@/components/ui/SemAcesso';
 import { paletas, palette } from '@/constants/Colors';
+import { usePerfilAtual } from '@/.lib/acesso';
 import { instalarFonteInter } from '@/.lib/fonte';
 import { useTema } from '@/.lib/tema';
 import { LOGIN_DESATIVADO } from '@/.lib/dev';
@@ -61,6 +64,8 @@ function temaNavegacao(esquema: 'light' | 'dark'): Theme {
 export default function RootLayout() {
   const { esquema } = useTema();
   const { sessao, carregando } = useSessao();
+  const { perfil, carregando: carregandoPerfil } = usePerfilAtual();
+  const segmentos = useSegments();
   const [fontesProntas] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -80,6 +85,31 @@ export default function RootLayout() {
 
   if (!LOGIN_DESATIVADO && !sessao) {
     return <Auth />;
+  }
+
+  // O portal do paciente tem sua própria autenticação (o paciente não é da
+  // equipe). Fora dele, a área profissional exige um perfil ativo em
+  // `profissionais` — sem isso, nem admin nem fisioterapeuta entram.
+  const noPortal = segmentos[0] === 'portal';
+  if (sessao && !noPortal) {
+    if (carregandoPerfil) {
+      return (
+        <View className="flex-1 bg-fundo items-center justify-center">
+          <ActivityIndicator color={palette.primaria} />
+        </View>
+      );
+    }
+    if (!perfil || !perfil.ativo) {
+      return (
+        <SemAcesso
+          mensagem={
+            !perfil
+              ? 'Esta conta não faz parte de nenhuma clínica. Use o Portal do Paciente ou fale com o administrador.'
+              : 'Seu acesso foi desativado. Fale com o administrador da clínica.'
+          }
+        />
+      );
+    }
   }
 
   return (

@@ -1,0 +1,49 @@
+import type { ReactNode } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+
+import SemAcesso from '@/components/ui/SemAcesso';
+import { palette } from '@/constants/Colors';
+import { papelPode, usePerfilAtual, type Papel, type Permissao } from '@/.lib/acesso';
+
+/**
+ * Envolve uma tela/área que só alguns papéis podem ver. Enquanto o perfil
+ * carrega mostra um spinner; se o usuário não tem acesso, mostra <SemAcesso>.
+ *
+ *   <Protegido permissao="painel_admin"><PainelAdmin /></Protegido>
+ *   <Protegido papel="admin">...</Protegido>
+ */
+export default function Protegido({
+  permissao,
+  papel,
+  children,
+}: {
+  permissao?: Permissao;
+  papel?: Papel | Papel[];
+  children: ReactNode;
+}) {
+  const { perfil, carregando } = usePerfilAtual();
+
+  if (carregando) {
+    return (
+      <View className="flex-1 bg-fundo items-center justify-center">
+        <ActivityIndicator color={palette.primaria} />
+      </View>
+    );
+  }
+
+  const papeisAceitos = papel ? ([] as Papel[]).concat(papel) : null;
+
+  const mensagem = !perfil
+    ? 'Sua conta não está vinculada a nenhuma clínica. Fale com o administrador.'
+    : !perfil.ativo
+      ? 'Seu acesso foi desativado. Fale com o administrador da clínica.'
+      : papeisAceitos && !papeisAceitos.includes(perfil.papel)
+        ? 'Você não tem o perfil necessário para acessar esta área.'
+        : permissao && !papelPode(perfil.papel, permissao)
+          ? 'Esta área é restrita a administradores da clínica.'
+          : null;
+
+  if (mensagem) return <SemAcesso mensagem={mensagem} />;
+
+  return <>{children}</>;
+}
