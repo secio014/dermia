@@ -9,7 +9,7 @@ export default function TelaNaoEncontrada() {
         <Text className="text-texto text-lg font-semibold mb-2 text-center">
           Esta tela não existe.
         </Text>
-        <Link href="/" className="mt-4 py-3">
+        <Link href="/painel" className="mt-4 py-3">
           <Text className="text-primaria font-semibold">Voltar para o início</Text>
         </Link>
       </View>

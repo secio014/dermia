@@ -113,7 +113,7 @@ export default function NovoRegistro() {
       contentContainerClassName="w-full max-w-2xl self-center"
       contentContainerStyle={{ paddingBottom: 40 }}
       keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <Text className="text-texto font-semibold mb-2">Adicionar medida de goniometria</Text>
 
       <TextInput

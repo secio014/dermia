@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,14 +14,25 @@ const CHAVE_MENU = 'dermia:menu-aberto';
 const LARGURA_ABERTA = 240;
 const LARGURA_FECHADA = 64;
 
+// Rotas de topo (destinos fixos do menu) — nelas não aparece o "‹ Voltar".
+const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin'];
+
 /**
  * Layout da web em telas largas (>= 768px): barra lateral à esquerda (recolhível
- * para uma trilha só de ícones, com transição suave) + área de conteúdo.
- * No celular / web estreita o (tabs)/_layout usa a barra inferior normal.
+ * para uma trilha só de ícones, com transição suave) + área de conteúdo. Envolve
+ * toda a área profissional — as páginas internas ganham um "‹ Voltar" no topo do
+ * conteúdo em vez do header nativo. No celular / web estreita, o (tabs)/_layout
+ * usa a barra inferior normal.
  */
-export default function WebShell() {
+export default function WebShell({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const emPaginaInterna = !ROTAS_TOPO.includes(pathname);
+
+  function voltar() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/painel');
+  }
   const { cores, preferencia, escolher } = useTema();
   const { perfil } = usePerfilAtual();
   const [aberto, setAberto] = useState(true);
@@ -85,7 +96,8 @@ export default function WebShell() {
           <View className="h-2" />
 
           {ITENS_NAV.map((item) => {
-            const ativo = item.rota === '/' ? pathname === '/' : pathname.startsWith(item.rota);
+            const ativo =
+              item.rota === '/painel' ? pathname === '/painel' : pathname.startsWith(item.rota);
             return (
               <ItemBarra
                 key={item.nome}
@@ -108,6 +120,28 @@ export default function WebShell() {
               cores={cores}
               onPress={() => router.push('/admin')}
             />
+          )}
+
+          {__DEV__ && (
+            <>
+              <View className="h-2" />
+              <ItemBarra
+                icone="globe-outline"
+                rotulo="Site"
+                aberto={aberto}
+                ativo={pathname === '/'}
+                cores={cores}
+                onPress={() => router.push('/')}
+              />
+              <ItemBarra
+                icone="person-outline"
+                rotulo="Portal do paciente"
+                aberto={aberto}
+                ativo={pathname.startsWith('/portal')}
+                cores={cores}
+                onPress={() => router.push('/portal')}
+              />
+            </>
           )}
         </View>
 
@@ -142,7 +176,16 @@ export default function WebShell() {
 
       <View className="flex-1 bg-fundo">
         <View className="flex-1 w-full self-center" style={{ maxWidth: 1100 }}>
-          <Slot />
+          {emPaginaInterna && (
+            <Pressable
+              onPress={voltar}
+              accessibilityLabel="Voltar"
+              className="flex-row items-center gap-1 px-4 pt-3 pb-1 self-start">
+              <Ionicons name="chevron-back" size={18} color={cores.primaria} />
+              <Text className="text-primaria font-medium">Voltar</Text>
+            </Pressable>
+          )}
+          {children ?? <Slot />}
         </View>
         <WebFooter />
       </View>

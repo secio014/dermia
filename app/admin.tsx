@@ -15,6 +15,7 @@ import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
 import { avisar } from '@/.lib/aviso';
 import { rotuloEtapaFeedback } from '@/.lib/feedback';
+import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
@@ -66,6 +67,7 @@ export default function TelaAdmin() {
 
 function PainelAdmin() {
   const { cores } = useTema();
+  const largo = useLargo();
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [resumoFeedback, setResumoFeedback] = useState<ResumoFeedbackEtapa[]>([]);
   const [pacientes, setPacientes] = useState<PacienteAdmin[]>([]);
@@ -275,18 +277,21 @@ function PainelAdmin() {
 
       {/* ── Equipe ─────────────────────────────────────────────── */}
       <Text className="text-texto font-semibold mt-8 mb-2">Equipe</Text>
-      {equipe.map((m) => (
-        <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
-          <Text className="text-texto font-semibold">{m.nome}</Text>
-          <Text className="text-secundario text-xs">
-            {m.papel}
-            {m.email ? ` · ${m.email}` : ''}
-            {m.ativo ? '' : ' · inativo'}
-          </Text>
+      <View className={largo ? 'flex-row gap-4 items-start' : ''}>
+        <View className={largo ? 'flex-1' : ''}>
+          {equipe.map((m) => (
+            <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
+              <Text className="text-texto font-semibold">{m.nome}</Text>
+              <Text className="text-secundario text-xs">
+                {m.papel}
+                {m.email ? ` · ${m.email}` : ''}
+                {m.ativo ? '' : ' · inativo'}
+              </Text>
+            </View>
+          ))}
         </View>
-      ))}
 
-      <View className="bg-superficie border border-borda rounded-xl p-4 mt-1">
+        <View className={`bg-superficie border border-borda rounded-xl p-4 mt-1 ${largo ? 'flex-1' : ''}`}>
         <Text className="text-texto font-semibold mb-2">Cadastrar fisioterapeuta</Text>
         <TextInput
           value={novoNome}
@@ -332,6 +337,7 @@ function PainelAdmin() {
             </Text>
           </View>
         )}
+        </View>
       </View>
 
       {/* ── Pacientes ──────────────────────────────────────────── */}

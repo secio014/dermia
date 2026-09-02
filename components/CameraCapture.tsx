@@ -6,6 +6,8 @@ import { Image, Platform, Pressable, Text, View } from 'react-native';
 
 import { palette } from '@/constants/Colors';
 
+const web = Platform.OS === 'web';
+
 export default function CameraCapture({ onCapture }: { onCapture: (uri: string) => void }) {
   const [permissao, solicitarPermissao] = useCameraPermissions();
   const [foto, setFoto] = useState<string | null>(null);
@@ -52,6 +54,31 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
   }
 
   if (foto) {
+    if (web) {
+      return (
+        <View className="flex-1 bg-fundo items-center justify-center p-6">
+          <View className="flex-row items-center gap-6">
+            <Image
+              source={{ uri: foto }}
+              style={{ width: 360, maxWidth: '100%', aspectRatio: 1, borderRadius: 16 }}
+              resizeMode="cover"
+            />
+            <View style={{ width: 200 }} className="gap-3">
+              <Pressable
+                onPress={() => onCapture(foto)}
+                className="bg-primaria rounded-xl py-3 items-center">
+                <Text className="text-white font-semibold">Usar foto</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setFoto(null)}
+                className="bg-superficie border border-borda rounded-xl py-3 items-center">
+                <Text className="text-texto font-semibold">Refazer</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      );
+    }
     return (
       <View className="flex-1 bg-fundo">
         <Image source={{ uri: foto }} style={{ flex: 1 }} resizeMode="contain" />
@@ -71,32 +98,70 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
     );
   }
 
+  const moldura = (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <View
+        style={{
+          width: '75%',
+          aspectRatio: 1,
+          borderWidth: 3,
+          borderColor: '#FFFFFF',
+          borderRadius: 16,
+          borderStyle: 'dashed',
+        }}
+      />
+    </View>
+  );
+
+  if (web) {
+    return (
+      <View className="flex-1 bg-fundo items-center justify-center p-6">
+        <View className="flex-row items-center gap-6">
+          <View
+            style={{ width: 360, maxWidth: '100%', aspectRatio: 1, borderRadius: 16, overflow: 'hidden' }}>
+            <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing} />
+            {moldura}
+          </View>
+          <View style={{ width: 200 }} className="items-center gap-4">
+            <Text className="text-secundario text-xs text-center">
+              Centralize a lesão na moldura e capture.
+            </Text>
+            <Pressable
+              onPress={capturar}
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 36,
+                borderWidth: 4,
+                borderColor: palette.primaria,
+              }}
+              className="items-center justify-center bg-superficie"
+            />
+            <Pressable onPress={anexarDaGaleria} className="flex-row items-center gap-2">
+              <Ionicons name="images-outline" size={18} color={palette.primaria} />
+              <Text className="text-primaria font-semibold">Anexar imagem</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-fundo">
       <View style={{ flex: 1 }}>
         <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing} />
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-          <View
-            style={{
-              width: '75%',
-              aspectRatio: 1,
-              borderWidth: 3,
-              borderColor: '#FFFFFF',
-              borderRadius: 16,
-              borderStyle: 'dashed',
-            }}
-          />
-        </View>
+        {moldura}
 
         {Platform.OS !== 'web' && (
           <Pressable

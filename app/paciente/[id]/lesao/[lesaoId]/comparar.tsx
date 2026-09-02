@@ -109,7 +109,7 @@ export default function ComparadorTemporal() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-2xl self-center"
       contentContainerStyle={{ paddingBottom: 32 }}>
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <Text className="text-texto text-lg font-bold mb-3">Comparador temporal</Text>
 
       <Text className="text-secundario text-xs mb-1">Antes</Text>

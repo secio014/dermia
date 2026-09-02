@@ -74,7 +74,7 @@ export default function NovaFoto() {
 
   return (
     <>
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <CameraCapture onCapture={enviar} />
     </>
   );

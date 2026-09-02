@@ -1,6 +1,7 @@
 import {
   DarkTheme,
   DefaultTheme,
+  Redirect,
   Stack,
   ThemeProvider,
   useSegments,
@@ -14,11 +15,12 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 
-import Auth from '@/components/Auth';
+import WebShell from '@/components/nav/WebShell';
 import Aviso from '@/components/ui/Aviso';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
@@ -66,11 +68,22 @@ export default function RootLayout() {
   const { sessao, carregando } = useSessao();
   const { perfil, carregando: carregandoPerfil } = usePerfilAtual();
   const segmentos = useSegments();
+  const { width } = useWindowDimensions();
   const [fontesProntas] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+  });
+
+  // A aba do navegador mostra "DermIA" em vez da URL. O +html.tsx só roda no
+  // render estático (build); no dev server (`expo start --web`) e nas telas que
+  // usam o WebShell (que renderiza <Slot/> sem opções de tela) o título não é
+  // definido — então fixamos aqui, a cada navegação.
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.title = 'DermIA';
+    }
   });
 
   if (carregando || !fontesProntas) {
@@ -83,15 +96,24 @@ export default function RootLayout() {
 
   SplashScreen.hideAsync();
 
-  if (!LOGIN_DESATIVADO && !sessao) {
-    return <Auth />;
+  // `/` é a landing pública (home sobre o projeto + planos) e `/portal/*` tem sua
+  // própria autenticação. Nenhuma das duas passa pelos gates da área profissional.
+  const raiz = segmentos[0] as string | undefined;
+  // Rotas sem gate da área profissional: landing, login único e portal do paciente.
+  const rotaPublica =
+    raiz == null || raiz === 'index' || raiz === 'login' || raiz === 'portal';
+
+  // Na web larga a área profissional inteira fica dentro do menu lateral
+  // (WebShell) — sem o header nativo em cima. A landing, o login e o portal ficam de fora.
+  const usarShell = Platform.OS === 'web' && width >= 768 && !rotaPublica;
+
+  if (!LOGIN_DESATIVADO && !sessao && !rotaPublica) {
+    return <Redirect href="/login" />;
   }
 
-  // O portal do paciente tem sua própria autenticação (o paciente não é da
-  // equipe). Fora dele, a área profissional exige um perfil ativo em
+  // Fora do portal e da landing, a área profissional exige um perfil ativo em
   // `profissionais` — sem isso, nem admin nem fisioterapeuta entram.
-  const noPortal = segmentos[0] === 'portal';
-  if (sessao && !noPortal) {
+  if (sessao && !rotaPublica) {
     if (carregandoPerfil) {
       return (
         <View className="flex-1 bg-fundo items-center justify-center">
@@ -112,25 +134,34 @@ export default function RootLayout() {
     }
   }
 
+  const pilha = (
+    <Stack
+      screenOptions={{
+        contentStyle: { backgroundColor: paletas[esquema].fundo },
+        headerShown: !usarShell,
+        headerTitle: 'DermIA',
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 4 }}>
+            <BotaoTema size={20} />
+            <LogoDermia size={22} />
+          </View>
+        ),
+      }}>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="portal/index" options={{ headerShown: false }} />
+      <Stack.Screen name="portal/login" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="admin" options={{ presentation: usarShell ? 'card' : 'modal' }} />
+      <Stack.Screen name="consulta/nova" options={{ presentation: usarShell ? 'card' : 'modal' }} />
+      <Stack.Screen name="consulta/[id]" />
+    </Stack>
+  );
+
   return (
     <ThemeProvider value={temaNavegacao(esquema)}>
       <View className="flex-1 bg-fundo">
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: paletas[esquema].fundo },
-            headerTitle: 'Derm.IA',
-            headerRight: () => (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 4 }}>
-                <BotaoTema size={20} />
-                <LogoDermia size={22} />
-              </View>
-            ),
-          }}>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="admin" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="consulta/nova" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="consulta/[id]" />
-        </Stack>
+        {usarShell ? <WebShell>{pilha}</WebShell> : pilha}
         <Aviso />
       </View>
     </ThemeProvider>

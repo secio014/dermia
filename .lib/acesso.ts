@@ -56,6 +56,34 @@ export function ehAdmin(perfil: Pick<PerfilAtual, 'papel'> | null | undefined): 
   return perfil?.papel === 'admin';
 }
 
+/**
+ * Para onde mandar o usuário logo depois do login. O login é uma tela só — o
+ * destino sai do vínculo da conta:
+ *  - linha ativa em `profissionais` (admin ou fisioterapeuta) → área da equipe;
+ *  - linha em `pacientes` (user_id) → Portal do Paciente;
+ *  - nenhum vínculo → `null` (conta sem acesso).
+ */
+export async function rotaInicialDoUsuario(): Promise<'/painel' | '/portal' | null> {
+  const { data: usuario } = await supabase.auth.getUser();
+  if (!usuario.user) return null;
+
+  const { data: prof } = await supabase
+    .from('profissionais')
+    .select('ativo')
+    .eq('id', usuario.user.id)
+    .maybeSingle();
+  if (prof?.ativo) return '/painel';
+
+  const { data: pac } = await supabase
+    .from('pacientes')
+    .select('id')
+    .eq('user_id', usuario.user.id)
+    .maybeSingle();
+  if (pac) return '/portal';
+
+  return null;
+}
+
 // --- store de módulo -------------------------------------------------------
 // Um único fetch do perfil por sessão, compartilhado por todos os `usePerfilAtual()`.
 // Recarrega sempre que o estado de auth muda (login, logout, refresh de token).

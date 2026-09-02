@@ -83,7 +83,7 @@ export default function NovoAtestado() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName="w-full max-w-2xl self-center"
       contentContainerStyle={{ paddingBottom: 40 }}>
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
 
       <Text className="text-secundario text-xs font-semibold mb-1">TIPO</Text>
       <View className="flex-row gap-2 mb-4">

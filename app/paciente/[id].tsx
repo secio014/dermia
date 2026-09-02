@@ -25,7 +25,7 @@ import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
 // Endereço do portal do paciente (app web publicado). Vai no e-mail de acesso.
-const URL_PORTAL = 'https://dermia.tech/portal/login';
+const URL_PORTAL = 'https://dermia.tech/login';
 
 type Paciente = {
   id: string;
@@ -506,7 +506,7 @@ export default function DetalhePaciente() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : 'w-full max-w-2xl self-center'}
       contentContainerStyle={{ paddingBottom: 40 }}>
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome_completo}</Text>
       <Text className="text-secundario mb-5">{paciente?.codigo_pseudonimo}</Text>
 

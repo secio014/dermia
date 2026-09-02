@@ -10,14 +10,15 @@ import { supabase } from '@/.lib/supabase';
 type Ids = { pacienteId: string | null; lesaoId: string | null; analiseId: string | null };
 
 const ROTAS_FIXAS: [string, string][] = [
-  ['Home (Início)', '/'],
+  ['Landing / site', '/'],
+  ['Home (painel)', '/painel'],
   ['Agenda', '/agenda'],
   ['Ajustes', '/ajustes'],
   ['Admin', '/admin'],
   ['Nova consulta', '/consulta/nova'],
   ['Novo paciente', '/paciente/novo'],
   ['Portal do paciente', '/portal'],
-  ['Portal — login', '/portal/login'],
+  ['Login (único)', '/login'],
   ['Página não encontrada (404)', '/rota-que-nao-existe'],
 ];
 
