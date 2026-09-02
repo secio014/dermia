@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import { palette } from '@/constants/Colors';
 import { GRAUS_CLINICOS } from '@/.lib/scq';
 
 export type ResultadoIA = {
@@ -9,10 +10,14 @@ export type ResultadoIA = {
   observacao?: string;
 };
 
+// Espelha o prefixo gravado pela Edge Function analisar-lesao quando a foto é imprópria.
+const PREFIXO_IMAGEM_INADEQUADA = 'IMAGEM_INADEQUADA: ';
+
 export default function ValidacaoIA({
   status,
   resultado,
   confianca,
+  erroMensagem,
   validacaoProfissional,
   onAceitar,
   onEditar,
@@ -21,6 +26,7 @@ export default function ValidacaoIA({
   status: string;
   resultado: ResultadoIA | null;
   confianca: number | null;
+  erroMensagem?: string | null;
   validacaoProfissional: string | null;
   onAceitar: () => void;
   onEditar: (grauEscolhido: string) => void;
@@ -31,13 +37,28 @@ export default function ValidacaoIA({
 
   if (status === 'pendente' || status === 'processando') {
     return (
-      <View className="bg-superficie border border-borda rounded-xl p-4 items-center">
-        <Text className="text-secundario">Análise de IA ainda não concluída.</Text>
+      <View className="bg-superficie border border-borda rounded-xl p-4 flex-row items-center justify-center gap-2">
+        <ActivityIndicator size="small" color={palette.primaria} />
+        <Text className="text-secundario">Analisando a foto…</Text>
       </View>
     );
   }
 
   if (status === 'erro') {
+    const imagemInadequada = erroMensagem?.startsWith(PREFIXO_IMAGEM_INADEQUADA);
+    if (imagemInadequada) {
+      return (
+        <View className="bg-superficie border border-atencao rounded-xl p-4">
+          <Text className="text-atencao font-semibold mb-1">Imagem inadequada para análise</Text>
+          <Text className="text-secundario text-sm">
+            {erroMensagem!.slice(PREFIXO_IMAGEM_INADEQUADA.length)}
+          </Text>
+          <Text className="text-secundario text-xs mt-2">
+            Refaça a foto com boa iluminação, foco e a lesão bem enquadrada, ou avalie manualmente.
+          </Text>
+        </View>
+      );
+    }
     return (
       <View className="bg-superficie border border-risco rounded-xl p-4 items-center">
         <Text className="text-risco text-center">A análise de IA falhou. Avalie manualmente.</Text>

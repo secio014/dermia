@@ -64,6 +64,7 @@ $RECYCLE.BIN/
 # Supabase CLI local cache
 supabase/.temp/
 supabase/.branches/
+supabase/.react/
 supabase/functions/**/.env
 
 # Netlify (estado local do deploy)
@@ -77,3 +78,8 @@ scripts/*.local.sql
 .claude/
 .vscode/
 .idea/
+
+# Deno / config de editor das Edge Functions (local, não versionar)
+supabase/functions/deno.json
+supabase/functions/deno.jsonc
+supabase/functions/deno.lock

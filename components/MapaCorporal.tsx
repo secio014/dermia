@@ -12,6 +12,13 @@ const REGIOES_POR_VISTA: Record<Vista, RegiaoId[]> = {
   costas: ['cabeca', 'braco_esq', 'braco_dir', 'tronco_posterior', 'perna_esq', 'perna_dir'],
 };
 
+// Dimensões do <Svg> e do viewBox — a escala converte a geometria (coords do
+// viewBox) pra pixels dos Pressables sobrepostos.
+const SVG_W = 220;
+const SVG_H = 372;
+const ESCALA_X = SVG_W / 200;
+const ESCALA_Y = SVG_H / 360;
+
 // Retângulos posicionados num viewBox 200x360 — um boneco esquemático, não anatômico.
 const GEOMETRIA: Record<
   RegiaoId,
@@ -85,49 +92,70 @@ export default function MapaCorporal({
       </Text>
 
       <View className="items-center bg-superficie border border-borda rounded-xl py-4">
-        <Svg width={220} height={372} viewBox="0 0 200 360">
-          {/* Silhueta de fundo, só pra dar forma de corpo ao boneco. */}
-          <G opacity={0.5}>
-            <Circle cx={100} cy={31} r={24} fill={cores.borda} />
-            <Rect x={92} y={50} width={16} height={14} fill={cores.borda} />
-            <Rect x={52} y={58} width={96} height={124} rx={20} fill={cores.borda} />
-            <Rect x={12} y={60} width={30} height={140} rx={15} fill={cores.borda} />
-            <Rect x={158} y={60} width={30} height={140} rx={15} fill={cores.borda} />
-            <Rect x={58} y={196} width={38} height={158} rx={18} fill={cores.borda} />
-            <Rect x={104} y={196} width={38} height={158} rx={18} fill={cores.borda} />
-            <Ellipse cx={100} cy={188} rx={46} ry={16} fill={cores.borda} />
-          </G>
+        {/* O toque fica nos Pressables sobrepostos, não no SVG: passar onPress
+            direto num <Rect> faz o react-native-svg vazar handlers de touch do
+            RN pro <rect> do DOM na web ("Unknown event handler onResponderTerminate"). */}
+        <View style={{ width: SVG_W, height: SVG_H }}>
+          <Svg width={SVG_W} height={SVG_H} viewBox="0 0 200 360" pointerEvents="none">
+            {/* Silhueta de fundo, só pra dar forma de corpo ao boneco. */}
+            <G opacity={0.5}>
+              <Circle cx={100} cy={31} r={24} fill={cores.borda} />
+              <Rect x={92} y={50} width={16} height={14} fill={cores.borda} />
+              <Rect x={52} y={58} width={96} height={124} rx={20} fill={cores.borda} />
+              <Rect x={12} y={60} width={30} height={140} rx={15} fill={cores.borda} />
+              <Rect x={158} y={60} width={30} height={140} rx={15} fill={cores.borda} />
+              <Rect x={58} y={196} width={38} height={158} rx={18} fill={cores.borda} />
+              <Rect x={104} y={196} width={38} height={158} rx={18} fill={cores.borda} />
+              <Ellipse cx={100} cy={188} rx={46} ry={16} fill={cores.borda} />
+            </G>
+
+            {REGIOES_POR_VISTA[vista].map((regiao) => {
+              const g = GEOMETRIA[regiao];
+              const marcada = value.includes(regiao);
+              return (
+                <G key={regiao}>
+                  <Rect
+                    x={g.x}
+                    y={g.y}
+                    width={g.w}
+                    height={g.h}
+                    rx={g.rx ?? 8}
+                    fill={marcada ? cores.risco : cores.primariaSuave}
+                    stroke={marcada ? cores.risco : cores.borda}
+                    strokeWidth={marcada ? 3 : 2}
+                  />
+                  <SvgText
+                    x={g.x + g.w / 2}
+                    y={g.y + g.h / 2 + 4}
+                    fontSize={11}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    fill={marcada ? cores.superficie : cores.secundario}>
+                    {g.sigla}
+                  </SvgText>
+                </G>
+              );
+            })}
+          </Svg>
 
           {REGIOES_POR_VISTA[vista].map((regiao) => {
             const g = GEOMETRIA[regiao];
-            const marcada = value.includes(regiao);
             return (
-              <G key={regiao}>
-                <Rect
-                  x={g.x}
-                  y={g.y}
-                  width={g.w}
-                  height={g.h}
-                  rx={g.rx ?? 8}
-                  fill={marcada ? cores.risco : cores.primariaSuave}
-                  stroke={marcada ? cores.risco : cores.borda}
-                  strokeWidth={marcada ? 3 : 2}
-                  onPress={() => alternarRegiao(regiao)}
-                />
-                <SvgText
-                  x={g.x + g.w / 2}
-                  y={g.y + g.h / 2 + 4}
-                  fontSize={11}
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  fill={marcada ? cores.superficie : cores.secundario}
-                  pointerEvents="none">
-                  {g.sigla}
-                </SvgText>
-              </G>
+              <Pressable
+                key={regiao}
+                onPress={() => alternarRegiao(regiao)}
+                accessibilityRole="button"
+                style={{
+                  position: 'absolute',
+                  left: g.x * ESCALA_X,
+                  top: g.y * ESCALA_Y,
+                  width: g.w * ESCALA_X,
+                  height: g.h * ESCALA_Y,
+                }}
+              />
             );
           })}
-        </Svg>
+        </View>
       </View>
 
       <View className="flex-row flex-wrap gap-2 mt-3">

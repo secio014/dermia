@@ -40,10 +40,8 @@ export default function NovaFoto() {
 
       if (error) throw error;
 
-      // Dispara a análise em segundo plano — se a Edge Function/Ollama ainda
-      // não estiverem configurados, a análise só fica "pendente" mesmo.
-      supabase.functions.invoke('analisar-lesao', { body: { analise_id: analise.id } }).catch(() => {});
-
+      // Não dispara a IA aqui — a foto fica "pendente" e o profissional decide
+      // na tela seguinte se inicia a análise ou descarta a foto.
       router.replace(`/paciente/${id}/lesao/${lesaoId}/foto/${analise.id}`);
     } catch (e) {
       setEnviando(false);

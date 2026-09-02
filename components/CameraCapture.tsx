@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Platform, Pressable, Text, View } from 'react-native';
 
@@ -11,6 +12,16 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
   const [facing, setFacing] = useState<CameraType>('back');
   const cameraRef = useRef<CameraView>(null);
 
+  async function anexarDaGaleria() {
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.9,
+    });
+    if (!resultado.canceled && resultado.assets[0]?.uri) {
+      setFoto(resultado.assets[0].uri);
+    }
+  }
+
   if (!permissao) {
     return <View className="flex-1 bg-fundo" />;
   }
@@ -19,12 +30,17 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
     return (
       <View className="flex-1 bg-fundo items-center justify-center px-8">
         <Text className="text-texto text-center mb-4">
-          Precisamos da câmera para fotografar a lesão.
+          Precisamos da câmera para fotografar a lesão — ou anexe uma imagem já existente.
         </Text>
         <Pressable
           onPress={solicitarPermissao}
           className="bg-primaria rounded-xl py-3 px-6 items-center">
           <Text className="text-white font-semibold">Permitir câmera</Text>
+        </Pressable>
+        <Pressable
+          onPress={anexarDaGaleria}
+          className="mt-3 bg-superficie border border-borda rounded-xl py-3 px-6 items-center">
+          <Text className="text-texto font-semibold">Anexar imagem</Text>
         </Pressable>
       </View>
     );
@@ -113,6 +129,10 @@ export default function CameraCapture({ onCapture }: { onCapture: (uri: string) 
           }}
           className="items-center justify-center bg-superficie"
         />
+        <Pressable onPress={anexarDaGaleria} className="mt-3 flex-row items-center gap-2">
+          <Ionicons name="images-outline" size={18} color={palette.primaria} />
+          <Text className="text-primaria font-semibold">Anexar imagem da galeria</Text>
+        </Pressable>
       </View>
     </View>
   );

@@ -39,3 +39,23 @@ export async function obterUrlAssinada(caminho: string): Promise<string | null> 
   const { data } = await supabase.storage.from('fotos-lesoes').createSignedUrl(caminho, 60 * 10);
   return data?.signedUrl ?? null;
 }
+
+// Dispara a análise de IA de uma foto já salva (status vira "processando" e a
+// Edge Function grava o resultado em alguns segundos).
+export async function iniciarAnaliseIA(analiseId: string) {
+  const { error } = await supabase
+    .from('analises_ia')
+    .update({ status: 'processando' })
+    .eq('id', analiseId);
+  if (error) throw error;
+  await supabase.functions.invoke('analisar-lesao', { body: { analise_id: analiseId } });
+}
+
+// Apaga a análise + a foto no Storage (via Edge Function com service role).
+export async function excluirAnalise(analiseId: string) {
+  const { data, error } = await supabase.functions.invoke('excluir-analise', {
+    body: { analise_id: analiseId },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+}
