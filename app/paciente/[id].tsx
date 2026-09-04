@@ -411,33 +411,15 @@ export default function DetalhePaciente() {
 
   const secaoPortal = (
     <Secao titulo="Acesso ao portal do paciente">
-        {paciente?.user_id ? (
-          <View className="bg-superficie border border-ok rounded-xl p-4">
-            <View className="flex-row items-center gap-2 mb-2">
-              <Ionicons name="checkmark-circle" size={18} color={palette.ok} />
-              <Text className="text-ok font-semibold text-xs">Paciente já tem acesso ao portal.</Text>
-            </View>
-            <Text selectable className="text-secundario text-xs">Portal: {URL_PORTAL}</Text>
-            <Pressable
-              onPress={() => {
-                if (Platform.OS === 'web') {
-                  navigator.clipboard?.writeText(URL_PORTAL);
-                  avisar('Link do portal copiado.');
-                } else {
-                  Linking.openURL(URL_PORTAL);
-                }
-              }}
-              className="mt-2">
-              <Text className="text-primaria text-xs font-semibold">
-                {Platform.OS === 'web' ? 'Copiar link' : 'Abrir link'}
-              </Text>
-            </Pressable>
-          </View>
-        ) : senhaTemporaria ? (
+        {/* A senha recém-gerada tem prioridade: logo após criar o acesso, o
+            `carregar()` já traz `user_id` preenchido, então este ramo precisa
+            vir antes do "já tem acesso" para a senha não sumir na hora. */}
+        {senhaTemporaria ? (
           <View className="bg-superficie border border-ok rounded-xl p-4">
             <Text className="text-texto font-semibold mb-1">Acesso criado!</Text>
             <Text className="text-secundario text-xs mb-2">
-              Envie ao paciente o link e as credenciais abaixo. A senha só aparece agora.
+              Envie ao paciente o link e as credenciais abaixo. A senha só aparece agora — depois
+              do primeiro acesso ele mesmo pode trocá-la no portal, na aba “Conta”.
             </Text>
             <Text selectable className="text-texto text-xs">Portal: {URL_PORTAL}</Text>
             <Text selectable className="text-texto text-xs">E-mail: {emailPortal}</Text>
@@ -473,6 +455,28 @@ export default function DetalhePaciente() {
                 </Text>
               </Pressable>
             </View>
+          </View>
+        ) : paciente?.user_id ? (
+          <View className="bg-superficie border border-ok rounded-xl p-4">
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons name="checkmark-circle" size={18} color={palette.ok} />
+              <Text className="text-ok font-semibold text-xs">Paciente já tem acesso ao portal.</Text>
+            </View>
+            <Text selectable className="text-secundario text-xs">Portal: {URL_PORTAL}</Text>
+            <Pressable
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  navigator.clipboard?.writeText(URL_PORTAL);
+                  avisar('Link do portal copiado.');
+                } else {
+                  Linking.openURL(URL_PORTAL);
+                }
+              }}
+              className="mt-2">
+              <Text className="text-primaria text-xs font-semibold">
+                {Platform.OS === 'web' ? 'Copiar link' : 'Abrir link'}
+              </Text>
+            </Pressable>
           </View>
         ) : (
           <View>

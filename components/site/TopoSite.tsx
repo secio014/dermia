@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Linking, Pressable, Text, View } from 'react-native';
 
 import LogoDermia from '@/components/ui/LogoDermia';
-import { useLargo } from '@/.lib/responsivo';
+import { LARGURA_CONTEUDO, RECUO_CONTEUDO, useLargo } from '@/.lib/responsivo';
 import { useTema, type PreferenciaTema } from '@/.lib/tema';
 
 const EMAIL_COMERCIAL = 'comercial@dermia.tech';
@@ -35,8 +35,14 @@ export default function TopoSite({ onPlanos }: { onPlanos: () => void }) {
   const { preferencia, cores, escolher } = useTema();
 
   return (
-    <View className="w-full border-b border-borda bg-superficie">
-      <View className="w-full max-w-5xl self-center flex-row items-center justify-between px-5 py-3">
+    <View className="w-full border-b border-borda bg-superficie" style={{ alignItems: 'center' }}>
+      <View
+        className="flex-row items-center justify-between py-3"
+        style={{
+          width: '100%',
+          maxWidth: LARGURA_CONTEUDO,
+          paddingHorizontal: largo ? RECUO_CONTEUDO : 20,
+        }}>
         <Pressable onPress={() => router.push('/')} className="flex-row items-center gap-2">
           <LogoDermia size={28} />
           <Text className="text-texto text-xl font-bold">DermIA</Text>

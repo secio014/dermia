@@ -81,7 +81,7 @@ export default function NovoAtestado() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-2xl self-center"
+      contentContainerClassName="w-full max-w-3xl self-center"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
 

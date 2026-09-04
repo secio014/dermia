@@ -6,15 +6,17 @@ import { palette } from '@/constants/Colors';
 import SecaoHoje from '@/components/portal/SecaoHoje';
 import SecaoEvolucao from '@/components/portal/SecaoEvolucao';
 import SecaoTratamento from '@/components/portal/SecaoTratamento';
+import SecaoConta from '@/components/portal/SecaoConta';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { supabase } from '@/.lib/supabase';
 
-type Aba = 'hoje' | 'evolucao' | 'tratamento';
+type Aba = 'hoje' | 'evolucao' | 'tratamento' | 'conta';
 const ABAS: { id: Aba; rotulo: string }[] = [
   { id: 'hoje', rotulo: 'Hoje' },
   { id: 'evolucao', rotulo: 'Evolução' },
   { id: 'tratamento', rotulo: 'Tratamento' },
+  { id: 'conta', rotulo: 'Conta' },
 ];
 
 // O portal do paciente não tem header nativo — só esta barrinha: o ícone e o
@@ -122,6 +124,7 @@ export default function PortalPaciente() {
           {aba === 'hoje' && <SecaoHoje pacienteId={paciente.id} />}
           {aba === 'evolucao' && <SecaoEvolucao pacienteId={paciente.id} desde={paciente.desde} />}
           {aba === 'tratamento' && <SecaoTratamento pacienteId={paciente.id} />}
+          {aba === 'conta' && <SecaoConta />}
         </ScrollView>
       )}
     </View>

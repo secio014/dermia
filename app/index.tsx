@@ -9,7 +9,7 @@ import CartaoPlano, { type Plano } from '@/components/site/CartaoPlano';
 import TopoSite from '@/components/site/TopoSite';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { usePerfilAtual } from '@/.lib/acesso';
-import { useLargo } from '@/.lib/responsivo';
+import { LARGURA_CONTEUDO, RECUO_CONTEUDO, useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 
 const EMAIL_COMERCIAL = 'comercial@dermia.tech';
@@ -148,6 +148,14 @@ export default function Landing() {
     Linking.openURL(`mailto:${EMAIL_COMERCIAL}?subject=${encodeURIComponent('Interesse no DermIA')}`);
   }
 
+  // Bloco de conteúdo: centralizado, largura máxima folgada para monitores e um
+  // recuo lateral que respira. Todas as seções, o header e o rodapé usam.
+  const bloco = {
+    width: '100%' as const,
+    maxWidth: LARGURA_CONTEUDO,
+    alignSelf: 'center' as const,
+    paddingHorizontal: largo ? RECUO_CONTEUDO : 20,
+  };
   return (
     <View className="flex-1 bg-fundo">
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -157,19 +165,21 @@ export default function Landing() {
 
       <ScrollView ref={scrollRef} className="flex-1">
         {/* Hero */}
-        <View className="w-full items-center overflow-hidden px-5 pt-20 pb-16">
-          <View className="w-full max-w-2xl items-center">
-            {/* halo suave atrás do logo */}
+        <View className="w-full pt-24 pb-20" style={{ alignItems: 'center' }}>
+          <View style={{ ...bloco, alignItems: 'center' }}>
+            {/* halo suave da marca atrás do título */}
             <View
               pointerEvents="none"
               style={{
                 position: 'absolute',
-                top: -40,
-                width: 420,
-                height: 420,
-                borderRadius: 210,
+                top: -80,
+                left: '50%',
+                marginLeft: -260,
+                width: 520,
+                height: 520,
+                borderRadius: 260,
                 backgroundColor: cores.primaria,
-                opacity: 0.08,
+                opacity: 0.06,
               }}
             />
             <AoAparecer delay={0}>
@@ -177,13 +187,15 @@ export default function Landing() {
             </AoAparecer>
             <AoAparecer delay={80}>
               <Text
-                className="text-texto font-bold text-center mt-5"
-                style={{ fontSize: largo ? 40 : 28, lineHeight: largo ? 48 : 36 }}>
+                className="text-texto font-bold mt-5 text-center"
+                style={{ fontSize: largo ? 46 : 28, lineHeight: largo ? 54 : 36, maxWidth: 820 }}>
                 Acompanhamento clínico de queimaduras com apoio de IA
               </Text>
             </AoAparecer>
             <AoAparecer delay={140}>
-              <Text className="text-secundario text-base text-center mt-4">
+              <Text
+                className="text-secundario text-base mt-4 text-center"
+                style={{ maxWidth: 620 }}>
                 Do registro da lesão à alta: fotos padronizadas, análise assistida, evolução
                 documentada e um portal para o paciente acompanhar o tratamento.
               </Text>
@@ -194,7 +206,7 @@ export default function Landing() {
                 marginTop: 32,
                 gap: 12,
                 flexDirection: largo ? 'row' : 'column',
-                alignSelf: largo ? 'auto' : 'stretch',
+                alignSelf: 'center',
               }}>
               <BotaoCTA rotulo="Falar com vendas" onPress={falarComVendas} />
               <BotaoCTA rotulo="Entrar" variante="contorno" onPress={() => router.push('/login')} />
@@ -203,16 +215,18 @@ export default function Landing() {
         </View>
 
         {/* Como funciona */}
-        <View className="w-full bg-superficie border-y border-borda py-16">
-          <View className="w-full max-w-5xl self-center px-5">
-            <AoAparecer>
+        <View className="w-full bg-superficie border-y border-borda py-16" style={{ alignItems: 'center' }}>
+          <View style={bloco}>
+            <AoAparecer style={{ alignItems: 'center' }}>
               <Eyebrow>Como funciona</Eyebrow>
-              <Text className="text-texto text-2xl font-bold mb-1">
+              <Text className="text-texto text-2xl font-bold mb-1 text-center">
                 Três passos, do primeiro atendimento à alta
               </Text>
-              <Text className="text-secundario mb-8">Rápido de adotar, fácil para a equipe.</Text>
+              <Text className="text-secundario mb-8 text-center">
+                Rápido de adotar, fácil para a equipe.
+              </Text>
             </AoAparecer>
-            <View className={largo ? 'flex-row items-stretch gap-4' : 'gap-4'}>
+            <View className={largo ? 'flex-row items-stretch gap-5' : 'gap-4'}>
               {COMO_FUNCIONA.map((c, i) => (
                 <View key={c.titulo} className={largo ? 'flex-1' : 'w-full'}>
                   <CartaoHover delay={80 * (i + 1)} className="p-6">
@@ -231,28 +245,30 @@ export default function Landing() {
         </View>
 
         {/* Para clínicas e hospitais (B2B2C) */}
-        <View className="w-full max-w-5xl self-center px-5 py-16">
-          <View className={largo ? 'flex-row items-center gap-8' : 'gap-8'}>
-            <AoAparecer style={largo ? { flex: 1 } : undefined}>
-              <Eyebrow>Modelo B2B2C</Eyebrow>
-              <Text className="text-texto text-2xl font-bold mb-3">
-                Feito para clínicas e hospitais
-              </Text>
-              <Text className="text-secundario text-base">
-                A instituição contrata o DermIA, a equipe clínica usa no dia a dia e o paciente
-                acompanha o próprio tratamento pelo Portal do Paciente — exercícios, lembretes e
-                evolução, sem exposição das fotos clínicas.
-              </Text>
-            </AoAparecer>
-            <View className={largo ? 'flex-1 gap-3' : 'gap-3'}>
-              {PARA_QUEM.map(([icone, texto]) => (
-                <View
-                  key={texto}
-                  className="flex-row items-center gap-3 rounded-xl border border-borda bg-superficie p-4">
-                  <Ionicons name={icone} size={20} color={cores.primaria} />
-                  <Text className="text-texto text-sm flex-1">{texto}</Text>
-                </View>
-              ))}
+        <View className="w-full py-16" style={{ alignItems: 'center' }}>
+          <View style={bloco}>
+            <View className={largo ? 'flex-row items-center gap-10' : 'gap-8'}>
+              <AoAparecer style={largo ? { flex: 1 } : undefined}>
+                <Eyebrow>Modelo B2B2C</Eyebrow>
+                <Text className="text-texto text-2xl font-bold mb-3">
+                  Feito para clínicas e hospitais
+                </Text>
+                <Text className="text-secundario text-base">
+                  A instituição contrata o DermIA, a equipe clínica usa no dia a dia e o paciente
+                  acompanha o próprio tratamento pelo Portal do Paciente — exercícios, lembretes e
+                  evolução, sem exposição das fotos clínicas.
+                </Text>
+              </AoAparecer>
+              <View className={largo ? 'flex-1 gap-3' : 'gap-3'}>
+                {PARA_QUEM.map(([icone, texto]) => (
+                  <View
+                    key={texto}
+                    className="flex-row items-center gap-3 rounded-xl border border-borda bg-superficie p-4">
+                    <Ionicons name={icone} size={20} color={cores.primaria} />
+                    <Text className="text-texto text-sm flex-1">{texto}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
         </View>
@@ -260,20 +276,21 @@ export default function Landing() {
         {/* Planos */}
         <View
           className="w-full bg-superficie border-y border-borda py-16"
+          style={{ alignItems: 'center' }}
           onLayout={(e) => {
             planosY.current = e.nativeEvent.layout.y;
           }}>
-          <View className="w-full max-w-5xl self-center px-5">
-            <AoAparecer>
+          <View style={bloco}>
+            <AoAparecer style={{ alignItems: 'center' }}>
               <Eyebrow>Planos</Eyebrow>
-              <Text className="text-texto text-2xl font-bold mb-1">
+              <Text className="text-texto text-2xl font-bold mb-1 text-center">
                 Assinatura anual por instituição
               </Text>
-              <Text className="text-secundario mb-8">
+              <Text className="text-secundario mb-8 text-center">
                 Fale com o comercial para um orçamento conforme o porte da sua operação.
               </Text>
             </AoAparecer>
-            <View className={largo ? 'flex-row items-stretch gap-5' : 'gap-5'}>
+            <View className={largo ? 'flex-row items-stretch gap-6' : 'gap-5'}>
               {PLANOS.map((p, i) => (
                 <View key={p.nome} className={largo ? 'flex-1' : 'w-full'}>
                   <CartaoPlano plano={p} delay={90 * (i + 1)} />
@@ -284,27 +301,30 @@ export default function Landing() {
         </View>
 
         {/* Contato */}
-        <View className="w-full max-w-5xl self-center px-5 py-20 items-center">
-          <AoAparecer style={{ alignItems: 'center' }}>
-            <Eyebrow>Contato</Eyebrow>
-            <Text className="text-texto text-2xl font-bold text-center">Vamos conversar</Text>
-            <Text className="text-secundario text-center mt-2 max-w-xl">
-              Conte sobre a sua clínica ou hospital e montamos uma proposta e um piloto acompanhado.
-            </Text>
-            <View className="mt-6">
-              <BotaoCTA rotulo="Falar com vendas" onPress={falarComVendas} />
-            </View>
-            <Pressable onPress={() => router.push('/login')} style={{ marginTop: 16 }}>
-              <Text className="text-primaria font-medium">
-                Já tem conta? Entrar
+        <View className="w-full py-20" style={{ alignItems: 'center' }}>
+          <View style={bloco}>
+            <AoAparecer style={{ alignItems: 'center' }}>
+              <Eyebrow>Contato</Eyebrow>
+              <Text className="text-texto text-2xl font-bold text-center">Vamos conversar</Text>
+              <Text className="text-secundario mt-2 text-center" style={{ maxWidth: 560 }}>
+                Conte sobre a sua clínica ou hospital e montamos uma proposta e um piloto
+                acompanhado.
               </Text>
-            </Pressable>
-          </AoAparecer>
+              <View className="mt-6">
+                <BotaoCTA rotulo="Falar com vendas" onPress={falarComVendas} />
+              </View>
+              <Pressable onPress={() => router.push('/login')} style={{ marginTop: 16 }}>
+                <Text className="text-primaria font-medium">Já tem conta? Entrar</Text>
+              </Pressable>
+            </AoAparecer>
+          </View>
         </View>
 
         {/* Rodapé */}
-        <View className="w-full border-t border-borda bg-superficie">
-          <View className="w-full max-w-5xl self-center px-5 py-6 flex-row items-center justify-between flex-wrap gap-3">
+        <View className="w-full border-t border-borda bg-superficie" style={{ alignItems: 'center' }}>
+          <View
+            className="py-6 flex-row items-center justify-between flex-wrap gap-3"
+            style={bloco}>
             <View className="flex-row items-center gap-2">
               <LogoDermia size={18} />
               <Text className="text-secundario text-xs">

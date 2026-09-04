@@ -297,7 +297,7 @@ export default function TelaAgenda() {
           </ScrollView>
 
           {!largo && (
-            <View className="px-4 pb-10 w-full max-w-3xl self-center">{listaProximas}</View>
+            <View className="px-4 pb-10 w-full max-w-4xl self-center">{listaProximas}</View>
           )}
         </ScrollView>
 

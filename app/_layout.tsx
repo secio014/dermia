@@ -15,13 +15,15 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
+import type { Session } from '@supabase/supabase-js';
 import 'react-native-reanimated';
 import '../global.css';
 
 import WebShell from '@/components/nav/WebShell';
 import Aviso from '@/components/ui/Aviso';
+import BarraVisao from '@/components/ui/BarraVisao';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import SemAcesso from '@/components/ui/SemAcesso';
@@ -30,6 +32,7 @@ import { usePerfilAtual } from '@/.lib/acesso';
 import { instalarFonteInter } from '@/.lib/fonte';
 import { useTema } from '@/.lib/tema';
 import { LOGIN_DESATIVADO } from '@/.lib/dev';
+import { supabase } from '@/.lib/supabase';
 import { useSessao } from '@/.lib/useSessao';
 
 export {
@@ -45,6 +48,39 @@ export const unstable_settings = {
 // Prevent the splash screen from auto-hiding before fonts/theme are resolved.
 SplashScreen.preventAutoHideAsync();
 instalarFonteInter();
+
+/**
+ * Confirma que realmente NÃO há sessão antes de mandar para `/login`.
+ *
+ * Sem isso há uma corrida: `signInWithPassword` já resolveu (sessão válida na
+ * memória do supabase-js), mas o evento `SIGNED_IN` ainda não chegou ao
+ * `useSessao`, então `sessao` está `null` por um instante — e em produção
+ * (`LOGIN_DESATIVADO = false`) o layout devolvia `<Redirect href="/login" />`,
+ * "piscando" uma segunda tela de login logo depois de entrar.
+ *
+ * Enquanto essa checagem async não termina, o layout mostra um spinner em vez
+ * de redirecionar; se de fato não há sessão, aí sim vai para o login.
+ */
+function useSemSessaoConfirmada(sessao: Session | null): boolean {
+  const [confirmada, setConfirmada] = useState(false);
+
+  useEffect(() => {
+    if (sessao) {
+      setConfirmada(false);
+      return;
+    }
+    let vivo = true;
+    setConfirmada(false);
+    supabase.auth.getSession().then(({ data }) => {
+      if (vivo && !data.session) setConfirmada(true);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [sessao]);
+
+  return confirmada;
+}
 
 function temaNavegacao(esquema: 'light' | 'dark'): Theme {
   const base = esquema === 'dark' ? DarkTheme : DefaultTheme;
@@ -66,6 +102,7 @@ function temaNavegacao(esquema: 'light' | 'dark'): Theme {
 export default function RootLayout() {
   const { esquema } = useTema();
   const { sessao, carregando } = useSessao();
+  const semSessaoConfirmada = useSemSessaoConfirmada(sessao);
   const { perfil, carregando: carregandoPerfil } = usePerfilAtual();
   const segmentos = useSegments();
   const { width } = useWindowDimensions();
@@ -108,6 +145,15 @@ export default function RootLayout() {
   const usarShell = Platform.OS === 'web' && width >= 768 && !rotaPublica;
 
   if (!LOGIN_DESATIVADO && !sessao && !rotaPublica) {
+    // Ainda pode ser a janela pós-login em que o evento SIGNED_IN não chegou —
+    // segura um instante antes de decidir que é para ir ao login.
+    if (!semSessaoConfirmada) {
+      return (
+        <View className="flex-1 bg-fundo items-center justify-center">
+          <ActivityIndicator color={palette.primaria} />
+        </View>
+      );
+    }
     return <Redirect href="/login" />;
   }
 
@@ -152,6 +198,7 @@ export default function RootLayout() {
       <Stack.Screen name="portal/index" options={{ headerShown: false }} />
       <Stack.Screen name="portal/login" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="global" options={{ headerShown: !usarShell, headerTitle: 'Visão global' }} />
       <Stack.Screen name="admin" options={{ presentation: usarShell ? 'card' : 'modal' }} />
       <Stack.Screen name="consulta/nova" options={{ presentation: usarShell ? 'card' : 'modal' }} />
       <Stack.Screen name="consulta/[id]" />
@@ -161,6 +208,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={temaNavegacao(esquema)}>
       <View className="flex-1 bg-fundo">
+        <BarraVisao />
         {usarShell ? <WebShell>{pilha}</WebShell> : pilha}
         <Aviso />
       </View>

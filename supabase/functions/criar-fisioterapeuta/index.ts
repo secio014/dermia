@@ -1,13 +1,20 @@
-// Edge Function: cadastra um novo fisioterapeuta na clínica do admin.
-// Recebe { nome, email, registro? }. Só um profissional 'admin' pode chamar.
+// Edge Function: cadastra um novo membro de equipe (fisioterapeuta, estagiário
+// ou admin de clínica).
+// Recebe { nome, email, registro?, papel?, clinica_id? }.
+//  - Só um profissional 'admin' ou 'admin_geral' pode chamar.
+//  - 'admin' cadastra sempre na própria clínica; 'admin_geral' pode informar
+//    `clinica_id` (senão cai na clínica dele).
+//  - `papel` ∈ {fisioterapeuta, estagiario, admin}; default 'fisioterapeuta'.
 // Cria o usuário no Supabase Auth com senha temporária e a linha em
-// `profissionais` (mesma clínica do admin). Retorna a senha temporária pro
-// admin repassar — ela não é salva em lugar nenhum.
+// `profissionais`. Retorna a senha temporária pro admin repassar — ela não é
+// salva em lugar nenhum.
 //
 // Deploy: supabase functions deploy criar-fisioterapeuta
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { json, preflight } from '../_shared/cors.ts';
+
+const PAPEIS_CRIAVEIS = ['fisioterapeuta', 'estagiario', 'admin'];
 
 function gerarSenhaTemporaria(): string {
   return (
@@ -41,13 +48,31 @@ Deno.serve(async (req) => {
     .select('papel, clinica_id')
     .eq('id', usuario.user.id)
     .single();
-  if (admin?.papel !== 'admin') {
+  if (admin?.papel !== 'admin' && admin?.papel !== 'admin_geral') {
     return json({ error: 'Ação restrita a administradores.' }, 403);
   }
 
-  const { nome, email, registro } = await req.json();
+  const {
+    nome,
+    email,
+    registro,
+    papel: papelBruto,
+    clinica_id: clinicaBruta,
+  } = await req.json();
   if (!nome || !email) {
     return json({ error: 'nome e email são obrigatórios.' }, 400);
+  }
+
+  const papel = papelBruto ?? 'fisioterapeuta';
+  if (!PAPEIS_CRIAVEIS.includes(papel)) {
+    return json({ error: 'papel inválido.' }, 400);
+  }
+
+  // 'admin_geral' escolhe a clínica; 'admin' fica preso à própria.
+  const clinicaAlvo =
+    admin.papel === 'admin_geral' ? (clinicaBruta ?? admin.clinica_id) : admin.clinica_id;
+  if (!clinicaAlvo) {
+    return json({ error: 'Informe a clínica do novo usuário.' }, 400);
   }
 
   const supabaseAdmin = createClient(
@@ -70,11 +95,11 @@ Deno.serve(async (req) => {
   const { error: erroPerfil } = await supabaseAdmin.from('profissionais').upsert(
     {
       id: novo.user.id,
-      clinica_id: admin.clinica_id,
+      clinica_id: clinicaAlvo,
       nome,
       email,
       registro: registro ?? null,
-      papel: 'fisioterapeuta',
+      papel,
       ativo: true,
     },
     { onConflict: 'id' }
@@ -85,5 +110,5 @@ Deno.serve(async (req) => {
     return json({ error: erroPerfil.message }, 500);
   }
 
-  return json({ email, senha_temporaria: senhaTemporaria }, 200);
+  return json({ email, senha_temporaria: senhaTemporaria, papel }, 200);
 });

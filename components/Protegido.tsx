@@ -3,7 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 
 import SemAcesso from '@/components/ui/SemAcesso';
 import { palette } from '@/constants/Colors';
-import { papelPode, usePerfilAtual, type Papel, type Permissao } from '@/.lib/acesso';
+import { papelPode, usePapelEfetivo, usePerfilAtual, type Papel, type Permissao } from '@/.lib/acesso';
 
 /**
  * Envolve uma tela/área que só alguns papéis podem ver. Enquanto o perfil
@@ -11,6 +11,10 @@ import { papelPode, usePerfilAtual, type Papel, type Permissao } from '@/.lib/ac
  *
  *   <Protegido permissao="painel_admin"><PainelAdmin /></Protegido>
  *   <Protegido papel="admin">...</Protegido>
+ *
+ * O vínculo (conta na clínica, ativo) é checado pelo papel REAL; a permissão em
+ * si respeita o "Ver como" do admin_geral — assim ele consegue conferir que uma
+ * área fica bloqueada na visão de um fisioterapeuta, por exemplo.
  */
 export default function Protegido({
   permissao,
@@ -22,6 +26,7 @@ export default function Protegido({
   children: ReactNode;
 }) {
   const { perfil, carregando } = usePerfilAtual();
+  const { papel: papelEfetivo, simulando } = usePapelEfetivo();
 
   if (carregando) {
     return (
@@ -33,15 +38,20 @@ export default function Protegido({
 
   const papeisAceitos = papel ? ([] as Papel[]).concat(papel) : null;
 
+  const semPapel = papeisAceitos && (!papelEfetivo || !papeisAceitos.includes(papelEfetivo));
+  const semPermissao = permissao && !papelPode(papelEfetivo, permissao);
+
   const mensagem = !perfil
     ? 'Sua conta não está vinculada a nenhuma clínica. Fale com o administrador.'
     : !perfil.ativo
       ? 'Seu acesso foi desativado. Fale com o administrador da clínica.'
-      : papeisAceitos && !papeisAceitos.includes(perfil.papel)
-        ? 'Você não tem o perfil necessário para acessar esta área.'
-        : permissao && !papelPode(perfil.papel, permissao)
-          ? 'Esta área é restrita a administradores da clínica.'
-          : null;
+      : semPapel || semPermissao
+        ? simulando
+          ? `Nesta visão simulada (${simulando}) esta área fica indisponível.`
+          : semPapel
+            ? 'Você não tem o perfil necessário para acessar esta área.'
+            : 'Esta área é restrita a administradores da clínica.'
+        : null;
 
   if (mensagem) return <SemAcesso mensagem={mensagem} />;
 

@@ -4,13 +4,16 @@ import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import AlterarSenha from '@/components/ui/AlterarSenha';
 import { ehAdmin, usePerfilAtual } from '@/.lib/acesso';
 import { supabase } from '@/.lib/supabase';
 import { useTema, type PreferenciaTema } from '@/.lib/tema';
 
 const ROTULO_PAPEL: Record<string, string> = {
+  admin_geral: 'Admin geral (plataforma)',
   admin: 'Administrador',
   fisioterapeuta: 'Fisioterapeuta',
+  estagiario: 'Estagiário',
 };
 
 const OPCOES: { valor: PreferenciaTema; rotulo: string; icone: keyof typeof Ionicons.glyphMap }[] = [
@@ -39,7 +42,7 @@ export default function TelaAjustes() {
   return (
     <ScrollView
       className="flex-1 bg-fundo"
-      contentContainerClassName="w-full max-w-2xl self-center p-4">
+      contentContainerClassName="w-full max-w-3xl self-center p-4">
       <Text className="text-texto text-2xl font-bold mb-6">Ajustes</Text>
 
       {perfil && (
@@ -58,6 +61,10 @@ export default function TelaAjustes() {
           </Pressable>
         </Secao>
       )}
+
+      <Secao titulo="Segurança">
+        <AlterarSenha />
+      </Secao>
 
       {ehAdmin(perfil) && (
         <Secao titulo="Administração">

@@ -7,15 +7,17 @@ import { Animated, Pressable, Text, View } from 'react-native';
 import { ITENS_NAV } from '@/components/nav/itens';
 import WebFooter from '@/components/nav/WebFooter';
 import LogoDermia from '@/components/ui/LogoDermia';
-import { ehAdmin, usePerfilAtual } from '@/.lib/acesso';
+import { usePapelEfetivo } from '@/.lib/acesso';
+import { LARGURA_CONTEUDO } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
+import { definirVisao, type VisaoSimulada } from '@/.lib/visao';
 
 const CHAVE_MENU = 'dermia:menu-aberto';
 const LARGURA_ABERTA = 240;
 const LARGURA_FECHADA = 64;
 
 // Rotas de topo (destinos fixos do menu) — nelas não aparece o "‹ Voltar".
-const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin'];
+const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin', '/global'];
 
 /**
  * Layout da web em telas largas (>= 768px): barra lateral à esquerda (recolhível
@@ -34,7 +36,7 @@ export default function WebShell({ children }: { children?: ReactNode }) {
     else router.replace('/painel');
   }
   const { cores, preferencia, escolher } = useTema();
-  const { perfil } = usePerfilAtual();
+  const { papel, papelReal, simulando } = usePapelEfetivo();
   const [aberto, setAberto] = useState(true);
   const larguraAnim = useRef(new Animated.Value(LARGURA_ABERTA)).current;
 
@@ -111,7 +113,18 @@ export default function WebShell({ children }: { children?: ReactNode }) {
             );
           })}
 
-          {ehAdmin(perfil) && (
+          {papelReal === 'admin_geral' && !simulando && (
+            <ItemBarra
+              icone="planet-outline"
+              rotulo="Visão global"
+              aberto={aberto}
+              ativo={pathname.startsWith('/global')}
+              cores={cores}
+              onPress={() => router.push('/global')}
+            />
+          )}
+
+          {(papel === 'admin' || papel === 'admin_geral') && (
             <ItemBarra
               icone="shield-checkmark-outline"
               rotulo="Admin"
@@ -145,6 +158,42 @@ export default function WebShell({ children }: { children?: ReactNode }) {
           )}
         </View>
 
+        {papelReal === 'admin_geral' && aberto && (
+          <View className="px-1 pb-2">
+            <Text
+              className="text-secundario font-semibold uppercase mb-1 px-1"
+              style={{ fontSize: 10, letterSpacing: 0.8 }}>
+              Ver como
+            </Text>
+            <View className="flex-row flex-wrap gap-1">
+              {(
+                [
+                  ['admin', 'Admin'],
+                  ['fisioterapeuta', 'Fisio'],
+                  ['estagiario', 'Estag.'],
+                  ['paciente', 'Pac.'],
+                ] as [VisaoSimulada, string][]
+              ).map(([v, r]) => {
+                const on = simulando === v;
+                return (
+                  <Pressable
+                    key={v}
+                    onPress={() => definirVisao(on ? null : v)}
+                    className={`rounded-lg px-2 py-1 ${
+                      on ? 'bg-primaria' : 'bg-fundo border border-borda'
+                    }`}>
+                    <Text
+                      className={`font-semibold ${on ? 'text-white' : 'text-secundario'}`}
+                      style={{ fontSize: 11 }}>
+                      {r}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {aberto ? (
           <View className="flex-row gap-1 px-1">
             {(['light', 'dark', 'system'] as const).map((op) => (
@@ -175,7 +224,9 @@ export default function WebShell({ children }: { children?: ReactNode }) {
       </Animated.View>
 
       <View className="flex-1 bg-fundo">
-        <View className="flex-1 w-full self-center" style={{ maxWidth: 1100 }}>
+        {/* Conteúdo centralizado, com um teto largo para aproveitar monitores
+            grandes. As telas internas ainda limitam a própria largura. */}
+        <View className="flex-1 w-full self-center px-6" style={{ maxWidth: LARGURA_CONTEUDO }}>
           {emPaginaInterna && (
             <Pressable
               onPress={voltar}

@@ -44,12 +44,15 @@ export default function Login() {
   const [lembrar, setLembrar] = useState(true);
   const [carregando, setCarregando] = useState(false);
   const [erros, setErros] = useState<{ email?: string; senha?: string; geral?: string }>({});
-  const [redirecionando, setRedirecionando] = useState<'/painel' | '/portal' | null>(null);
+  const [redirecionando, setRedirecionando] = useState<'/global' | '/painel' | '/portal' | null>(
+    null
+  );
 
-  // Já logado (fora do dev, onde há login automático de teste): manda direto
-  // para a área da conta em vez de mostrar o formulário.
+  // Já logado: manda direto para a área da conta (conforme o papel) em vez de
+  // mostrar o formulário de novo. Cobre tanto o retorno de um usuário real
+  // quanto o login automático de teste do dev — sem isso, vir do site para
+  // "/login" abre uma segunda tela de login sem necessidade.
   useEffect(() => {
-    if (__DEV__) return;
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         rotaInicialDoUsuario().then((destino) => setRedirecionando(destino ?? '/painel'));
@@ -107,10 +110,10 @@ export default function Login() {
       <View
         className="flex-row items-center justify-between px-4"
         style={{ paddingTop: insets.top + 8, paddingBottom: 8 }}>
-        <Pressable onPress={() => router.replace('/')} className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-2">
           <LogoDermia size={26} />
           <Text className="text-texto text-lg font-bold">DermIA</Text>
-        </Pressable>
+        </View>
         <BotaoTema size={20} />
       </View>
 
@@ -173,16 +176,12 @@ export default function Login() {
             <Pressable
               onPress={entrar}
               disabled={carregando}
-              className="bg-primaria rounded-xl py-3.5 items-center mb-4">
+              className="bg-primaria rounded-xl py-3.5 items-center">
               {carregando ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text className="text-white font-semibold">Entrar</Text>
               )}
-            </Pressable>
-
-            <Pressable onPress={() => router.replace('/')} className="items-center py-2">
-              <Text className="text-secundario text-sm">Voltar ao site</Text>
             </Pressable>
           </View>
         </ScrollView>

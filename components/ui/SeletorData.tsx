@@ -127,32 +127,30 @@ export default function SeletorData({
         </View>
 
         {modo === 'anos' ? (
-          <View className="flex-row flex-wrap" style={{ maxHeight: 236 }}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View className="flex-row flex-wrap">
-                {ANOS.map((ano) => {
-                  const sel = ano === mesRef.getFullYear();
-                  return (
-                    <Pressable
-                      key={ano}
-                      onPress={() => {
-                        setMesRef(new Date(ano, mesRef.getMonth(), 1));
-                        setModo('meses');
-                      }}
-                      style={{ width: `${100 / 3}%` }}
-                      className="h-11 items-center justify-center">
-                      <View
-                        className={`px-3 py-1.5 rounded-lg ${sel ? 'bg-primaria' : ''}`}>
-                        <Text className={`text-sm ${sel ? 'text-white font-bold' : 'text-texto'}`}>
-                          {ano}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-          </View>
+          <ScrollView
+            style={{ maxHeight: 240 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {ANOS.map((ano) => {
+              const sel = ano === mesRef.getFullYear();
+              return (
+                <Pressable
+                  key={ano}
+                  onPress={() => {
+                    setMesRef(new Date(ano, mesRef.getMonth(), 1));
+                    setModo('meses');
+                  }}
+                  style={{ width: `${100 / 3}%` }}
+                  className="h-11 items-center justify-center">
+                  <View className={`px-3 py-1.5 rounded-lg ${sel ? 'bg-primaria' : ''}`}>
+                    <Text className={`text-sm ${sel ? 'text-white font-bold' : 'text-texto'}`}>
+                      {ano}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         ) : modo === 'meses' ? (
           <View className="flex-row flex-wrap">
             {MESES_CURTOS.map((mes, i) => {

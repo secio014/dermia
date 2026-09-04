@@ -2,19 +2,28 @@
 //
 // Um usuário do Supabase Auth só entra na área profissional se tiver uma linha
 // correspondente em `profissionais` e estiver `ativo`. O `papel` dessa linha
-// ('admin' | 'fisioterapeuta') define o que ele pode fazer — o mapa `PERMISSOES`
-// abaixo é a fonte única disso no cliente. (O RLS no banco é a barreira real;
-// isto aqui é a camada de UX: esconder/bloquear o que a pessoa não pode usar.)
+// define o que ele pode fazer — o mapa `PERMISSOES` abaixo é a fonte única
+// disso no cliente. (O RLS no banco é a barreira real; isto aqui é a camada de
+// UX: esconder/bloquear o que a pessoa não pode usar.)
+//
+// Papéis:
+//  - `admin_geral`   — a plataforma (nossa empresa): enxerga todas as clínicas,
+//                      todos os usuários, e pode pré-visualizar o app "na visão"
+//                      de cada papel (ver `.lib/visao.ts`).
+//  - `admin`         — administra uma clínica: equipe, exclusões, painel.
+//  - `fisioterapeuta`— dia a dia clínico.
+//  - `estagiario`    — mesmo escopo clínico do fisioterapeuta (supervisionado).
 
 import { useEffect, useState } from 'react';
 
 import { supabase } from '@/.lib/supabase';
+import { useVisao, type VisaoSimulada } from '@/.lib/visao';
 
-export type Papel = 'admin' | 'fisioterapeuta';
+export type Papel = 'admin_geral' | 'admin' | 'fisioterapeuta' | 'estagiario';
 
 export type PerfilAtual = {
   id: string;
-  clinica_id: string;
+  clinica_id: string | null;
   nome: string;
   email: string | null;
   papel: Papel;
@@ -22,10 +31,25 @@ export type PerfilAtual = {
 };
 
 /**
- * O que cada papel pode fazer. `fisioterapeuta` cuida do dia a dia clínico;
- * `admin` faz tudo isso e mais a gestão da clínica (equipe, exclusões, painel).
+ * O que cada papel pode fazer. `fisioterapeuta`/`estagiario` cuidam do dia a
+ * dia clínico; `admin` faz tudo isso e mais a gestão da clínica; `admin_geral`
+ * faz tudo de `admin` e mais a visão global da plataforma.
  */
 export const PERMISSOES = {
+  admin_geral: [
+    'painel_global',
+    'ver_todas_clinicas',
+    'alternar_visao',
+    'painel_admin',
+    'gerenciar_equipe',
+    'excluir_paciente',
+    'ver_indicadores',
+    'gerenciar_pacientes',
+    'gerenciar_lesoes',
+    'prescrever',
+    'emitir_documentos',
+    'criar_acesso_portal',
+  ],
   admin: [
     'painel_admin',
     'gerenciar_equipe',
@@ -44,6 +68,13 @@ export const PERMISSOES = {
     'emitir_documentos',
     'criar_acesso_portal',
   ],
+  estagiario: [
+    'gerenciar_pacientes',
+    'gerenciar_lesoes',
+    'prescrever',
+    'emitir_documentos',
+    'criar_acesso_portal',
+  ],
 } as const satisfies Record<Papel, readonly string[]>;
 
 export type Permissao = (typeof PERMISSOES)[Papel][number];
@@ -53,26 +84,31 @@ export function papelPode(papel: Papel | null | undefined, permissao: Permissao)
 }
 
 export function ehAdmin(perfil: Pick<PerfilAtual, 'papel'> | null | undefined): boolean {
-  return perfil?.papel === 'admin';
+  return perfil?.papel === 'admin' || perfil?.papel === 'admin_geral';
+}
+
+export function ehAdminGeral(perfil: Pick<PerfilAtual, 'papel'> | null | undefined): boolean {
+  return perfil?.papel === 'admin_geral';
 }
 
 /**
  * Para onde mandar o usuário logo depois do login. O login é uma tela só — o
  * destino sai do vínculo da conta:
- *  - linha ativa em `profissionais` (admin ou fisioterapeuta) → área da equipe;
- *  - linha em `pacientes` (user_id) → Portal do Paciente;
+ *  - profissional ativo com papel `admin_geral` → visão global (`/global`);
+ *  - qualquer outro profissional ativo → área da equipe (`/painel`);
+ *  - linha em `pacientes` (user_id) → Portal do Paciente (`/portal`);
  *  - nenhum vínculo → `null` (conta sem acesso).
  */
-export async function rotaInicialDoUsuario(): Promise<'/painel' | '/portal' | null> {
+export async function rotaInicialDoUsuario(): Promise<'/global' | '/painel' | '/portal' | null> {
   const { data: usuario } = await supabase.auth.getUser();
   if (!usuario.user) return null;
 
   const { data: prof } = await supabase
     .from('profissionais')
-    .select('ativo')
+    .select('papel, ativo')
     .eq('id', usuario.user.id)
     .maybeSingle();
-  if (prof?.ativo) return '/painel';
+  if (prof?.ativo) return prof.papel === 'admin_geral' ? '/global' : '/painel';
 
   const { data: pac } = await supabase
     .from('pacientes')
@@ -159,4 +195,32 @@ export function usePerfilAtual() {
     erro: erroAtual,
     recarregar: carregarPerfil,
   };
+}
+
+/**
+ * Papel "em vigor" na interface. Igual ao papel real, exceto quando um
+ * `admin_geral` ativou o "Ver como" (`.lib/visao.ts`) — aí a UI passa a se
+ * comportar como o papel escolhido; `'paciente'` vira papel nulo (as telas da
+ * equipe bloqueiam, como aconteceria com um paciente de verdade).
+ *
+ * Isso é só apresentação: no banco o `admin_geral` continua podendo tudo. Serve
+ * para conferir como cada tipo de usuário vê o app.
+ */
+export function usePapelEfetivo(): {
+  papel: Papel | null;
+  papelReal: Papel | null;
+  simulando: VisaoSimulada | null;
+} {
+  const { perfil } = usePerfilAtual();
+  const visao = useVisao();
+  const papelReal = perfil?.papel ?? null;
+
+  if (papelReal === 'admin_geral' && visao) {
+    return {
+      papel: visao === 'paciente' ? null : visao,
+      papelReal,
+      simulando: visao,
+    };
+  }
+  return { papel: papelReal, papelReal, simulando: null };
 }

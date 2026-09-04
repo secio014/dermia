@@ -114,7 +114,7 @@ export default function RelatorioPaciente() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-2xl self-center"
+      contentContainerClassName="w-full max-w-4xl self-center"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <Text className="text-texto text-lg font-bold mb-4">Relatório em PDF</Text>

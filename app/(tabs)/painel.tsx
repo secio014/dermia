@@ -163,7 +163,7 @@ export default function TelaInicio() {
         columnWrapperStyle={largo ? { gap: 16 } : undefined}
         keyExtractor={(item) => item.lesao_id ?? item.paciente_id}
         ListHeaderComponent={cabecalho}
-        contentContainerClassName="pb-8 w-full max-w-4xl self-center"
+        contentContainerClassName="pb-8 w-full max-w-5xl self-center"
         refreshControl={
           <RefreshControl
             refreshing={atualizando}
