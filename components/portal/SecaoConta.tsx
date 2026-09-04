@@ -1,13 +1,19 @@
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import EditarMeusDados from '@/components/portal/EditarMeusDados';
 import AlterarSenha from '@/components/ui/AlterarSenha';
 import { supabase } from '@/.lib/supabase';
 
-// Aba "Conta" do portal do paciente: trocar a senha do primeiro acesso e sair.
+// Aba "Conta" do portal do paciente: ver/editar os próprios dados, trocar a
+// senha do primeiro acesso e sair.
 export default function SecaoConta() {
   return (
     <View>
+      <View className="bg-superficie border border-borda rounded-xl mb-4">
+        <EditarMeusDados />
+      </View>
+
       <View className="bg-superficie border border-borda rounded-xl mb-4">
         <AlterarSenha />
       </View>

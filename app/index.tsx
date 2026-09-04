@@ -8,7 +8,6 @@ import CartaoHover from '@/components/site/CartaoHover';
 import CartaoPlano, { type Plano } from '@/components/site/CartaoPlano';
 import TopoSite from '@/components/site/TopoSite';
 import LogoDermia from '@/components/ui/LogoDermia';
-import { usePerfilAtual } from '@/.lib/acesso';
 import { LARGURA_CONTEUDO, RECUO_CONTEUDO, useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 
@@ -129,15 +128,16 @@ export default function Landing() {
   const router = useRouter();
   const largo = useLargo();
   const { cores } = useTema();
-  const { perfil, carregando } = usePerfilAtual();
   const scrollRef = useRef<ScrollView>(null);
   const planosY = useRef(0);
 
-  // A landing é uma página de marketing — só faz sentido na web. No app nativo,
-  // manda para a área certa (portal se for paciente, painel caso contrário).
+  // A landing é só para a web (é uma página de marketing) — nunca depende do
+  // tamanho da tela, só da plataforma. No app nativo a raiz é sempre a tela de
+  // login (que por sua vez já manda quem estiver logado para painel/portal);
+  // sem checar sessão/perfil aqui, então não tem uma tela de landing "piscando"
+  // antes do redirect.
   if (Platform.OS !== 'web') {
-    if (carregando) return <View className="flex-1 bg-fundo" />;
-    return <Redirect href={perfil && perfil.ativo ? '/painel' : '/portal'} />;
+    return <Redirect href="/login" />;
   }
 
   function irParaPlanos() {

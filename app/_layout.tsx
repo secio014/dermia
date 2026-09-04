@@ -30,7 +30,7 @@ import SemAcesso from '@/components/ui/SemAcesso';
 import { paletas, palette } from '@/constants/Colors';
 import { usePerfilAtual } from '@/.lib/acesso';
 import { instalarFonteInter } from '@/.lib/fonte';
-import { useTema } from '@/.lib/tema';
+import { useAplicarTema, useTema } from '@/.lib/tema';
 import { LOGIN_DESATIVADO } from '@/.lib/dev';
 import { supabase } from '@/.lib/supabase';
 import { useSessao } from '@/.lib/useSessao';
@@ -100,6 +100,7 @@ function temaNavegacao(esquema: 'light' | 'dark'): Theme {
 }
 
 export default function RootLayout() {
+  useAplicarTema();
   const { esquema } = useTema();
   const { sessao, carregando } = useSessao();
   const semSessaoConfirmada = useSemSessaoConfirmada(sessao);

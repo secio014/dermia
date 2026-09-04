@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { palette } from '@/constants/Colors';
+import CartaoClinica from '@/components/portal/CartaoClinica';
 import SecaoHoje from '@/components/portal/SecaoHoje';
 import SecaoEvolucao from '@/components/portal/SecaoEvolucao';
 import SecaoTratamento from '@/components/portal/SecaoTratamento';
@@ -31,9 +32,13 @@ function TopoPortal() {
 }
 
 export default function PortalPaciente() {
-  const [paciente, setPaciente] = useState<{ id: string; nome: string; desde: string | null } | null>(
-    null
-  );
+  const [paciente, setPaciente] = useState<{
+    id: string;
+    nome: string;
+    desde: string | null;
+    clinicaId: string | null;
+    responsavelId: string | null;
+  } | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [semAcesso, setSemAcesso] = useState(false);
   const [aba, setAba] = useState<Aba>('hoje');
@@ -47,7 +52,7 @@ export default function PortalPaciente() {
     }
     const { data } = await supabase
       .from('pacientes')
-      .select('id, nome_completo, criado_em')
+      .select('id, nome_completo, criado_em, clinica_id, criado_por')
       .eq('user_id', usuario.user.id)
       .single();
     if (!data) {
@@ -56,7 +61,13 @@ export default function PortalPaciente() {
       return;
     }
     setSemAcesso(false);
-    setPaciente({ id: data.id, nome: data.nome_completo, desde: data.criado_em ?? null });
+    setPaciente({
+      id: data.id,
+      nome: data.nome_completo,
+      desde: data.criado_em ?? null,
+      clinicaId: data.clinica_id ?? null,
+      responsavelId: data.criado_por ?? null,
+    });
     setCarregando(false);
   }, []);
 
@@ -103,6 +114,8 @@ export default function PortalPaciente() {
           contentContainerStyle={{ paddingBottom: 40 }}>
           <Text className="text-texto text-2xl font-bold mb-1">Olá, {paciente.nome}</Text>
           <Text className="text-secundario mb-4">Seu acompanhamento</Text>
+
+          <CartaoClinica clinicaId={paciente.clinicaId} responsavelId={paciente.responsavelId} />
 
           <View className="flex-row bg-superficie border border-borda rounded-xl p-1 mb-5">
             {ABAS.map((a) => {
