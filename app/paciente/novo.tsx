@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 import SeletorData from '@/components/ui/SeletorData';
 import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
+import { mascararTelefone, telefoneDigitos, telefoneValido } from '@/.lib/telefone';
 import { supabase } from '@/.lib/supabase';
 
 function gerarCodigo(): string {
@@ -18,6 +19,7 @@ function gerarCodigo(): string {
 export default function NovoPaciente() {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [consentiu, setConsentiu] = useState(false);
   const [codigo] = useState(gerarCodigo());
@@ -27,6 +29,10 @@ export default function NovoPaciente() {
   async function salvar() {
     if (!nome.trim()) {
       setErro('Informe o nome do paciente.');
+      return;
+    }
+    if (telefone && !telefoneValido(telefone)) {
+      setErro('Telefone incompleto. Use DDD + 9 + número, ex.: 11 9 5324-4847.');
       return;
     }
     if (!consentiu) {
@@ -51,6 +57,7 @@ export default function NovoPaciente() {
         codigo_pseudonimo: codigo,
         nome_completo: nome.trim(),
         email: email.trim() || null,
+        telefone: telefoneDigitos(telefone) || null,
         data_nascimento: dataNascimento || null,
         consentimento_em: new Date().toISOString(),
         consentimento_versao: '1.0',
@@ -70,10 +77,10 @@ export default function NovoPaciente() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-2xl self-center"
+      contentContainerClassName="w-full max-w-3xl self-center"
       contentContainerStyle={{ paddingBottom: 40 }}
       keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
       <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
 
@@ -93,6 +100,16 @@ export default function NovoPaciente() {
         placeholderTextColor="#5B6B7F"
         autoCapitalize="none"
         keyboardType="email-address"
+        className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
+      />
+
+      <TextInput
+        value={telefone}
+        onChangeText={(t) => setTelefone(mascararTelefone(t))}
+        placeholder="Telefone (opcional) — ex.: 11 9 5324-4847"
+        placeholderTextColor="#5B6B7F"
+        keyboardType="phone-pad"
+        maxLength={14}
         className="bg-superficie border border-borda rounded-xl px-4 py-3 mb-3 text-texto"
       />
 

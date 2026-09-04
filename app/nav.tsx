@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Stack } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
+import Protegido from '@/components/Protegido';
 import { supabase } from '@/.lib/supabase';
 
 // Página de navegação sem estilo — lista todas as rotas do app para
@@ -10,14 +11,16 @@ import { supabase } from '@/.lib/supabase';
 type Ids = { pacienteId: string | null; lesaoId: string | null; analiseId: string | null };
 
 const ROTAS_FIXAS: [string, string][] = [
-  ['Home (Início)', '/'],
+  ['Landing / site', '/'],
+  ['Home (painel)', '/painel'],
   ['Agenda', '/agenda'],
   ['Ajustes', '/ajustes'],
-  ['Admin', '/admin'],
+  ['Admin (clínica)', '/admin'],
+  ['Visão global (admin_geral)', '/global'],
   ['Nova consulta', '/consulta/nova'],
   ['Novo paciente', '/paciente/novo'],
   ['Portal do paciente', '/portal'],
-  ['Portal — login', '/portal/login'],
+  ['Login (único)', '/login'],
   ['Página não encontrada (404)', '/rota-que-nao-existe'],
 ];
 
@@ -33,6 +36,14 @@ function Item({ titulo, href }: { titulo: string; href: string }) {
 }
 
 export default function Navegacao() {
+  return (
+    <Protegido papel="admin_geral">
+      <TelaNavegacao />
+    </Protegido>
+  );
+}
+
+function TelaNavegacao() {
   const [ids, setIds] = useState<Ids>({ pacienteId: null, lesaoId: null, analiseId: null });
 
   useEffect(() => {

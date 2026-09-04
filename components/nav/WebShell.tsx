@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,23 +7,36 @@ import { Animated, Pressable, Text, View } from 'react-native';
 import { ITENS_NAV } from '@/components/nav/itens';
 import WebFooter from '@/components/nav/WebFooter';
 import LogoDermia from '@/components/ui/LogoDermia';
-import { ehAdmin, usePerfilAtual } from '@/.lib/acesso';
+import { usePapelEfetivo } from '@/.lib/acesso';
+import { LARGURA_CONTEUDO } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
+import { definirVisao, type VisaoSimulada } from '@/.lib/visao';
 
 const CHAVE_MENU = 'dermia:menu-aberto';
 const LARGURA_ABERTA = 240;
 const LARGURA_FECHADA = 64;
 
+// Rotas de topo (destinos fixos do menu) — nelas não aparece o "‹ Voltar".
+const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin', '/global', '/portal'];
+
 /**
  * Layout da web em telas largas (>= 768px): barra lateral à esquerda (recolhível
- * para uma trilha só de ícones, com transição suave) + área de conteúdo.
- * No celular / web estreita o (tabs)/_layout usa a barra inferior normal.
+ * para uma trilha só de ícones, com transição suave) + área de conteúdo. Envolve
+ * toda a área profissional — as páginas internas ganham um "‹ Voltar" no topo do
+ * conteúdo em vez do header nativo. No celular / web estreita, o (tabs)/_layout
+ * usa a barra inferior normal.
  */
-export default function WebShell() {
+export default function WebShell({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const emPaginaInterna = !ROTAS_TOPO.includes(pathname);
+
+  function voltar() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/painel');
+  }
   const { cores, preferencia, escolher } = useTema();
-  const { perfil } = usePerfilAtual();
+  const { papelReal, simulando } = usePapelEfetivo();
   const [aberto, setAberto] = useState(true);
   const larguraAnim = useRef(new Animated.Value(LARGURA_ABERTA)).current;
 
@@ -85,7 +98,8 @@ export default function WebShell() {
           <View className="h-2" />
 
           {ITENS_NAV.map((item) => {
-            const ativo = item.rota === '/' ? pathname === '/' : pathname.startsWith(item.rota);
+            const ativo =
+              item.rota === '/painel' ? pathname === '/painel' : pathname.startsWith(item.rota);
             return (
               <ItemBarra
                 key={item.nome}
@@ -99,7 +113,18 @@ export default function WebShell() {
             );
           })}
 
-          {ehAdmin(perfil) && (
+          {papelReal === 'admin_geral' && (
+            <ItemBarra
+              icone="planet-outline"
+              rotulo="Visão global"
+              aberto={aberto}
+              ativo={pathname.startsWith('/global')}
+              cores={cores}
+              onPress={() => router.push('/global')}
+            />
+          )}
+
+          {(papelReal === 'admin' || papelReal === 'admin_geral') && (
             <ItemBarra
               icone="shield-checkmark-outline"
               rotulo="Admin"
@@ -109,7 +134,70 @@ export default function WebShell() {
               onPress={() => router.push('/admin')}
             />
           )}
+
+          {/* Estes atalhos de dev usam o papel REAL (não o efetivo/simulado):
+              o admin_geral precisa navegar livremente mesmo "vendo como"
+              outro papel, sem que a simulação esconda seu próprio menu. */}
+          {__DEV__ && (papelReal === 'admin' || papelReal === 'admin_geral') && (
+            <>
+              <View className="h-2" />
+              {papelReal === 'admin_geral' && (
+                <ItemBarra
+                  icone="globe-outline"
+                  rotulo="Site"
+                  aberto={aberto}
+                  ativo={pathname === '/'}
+                  cores={cores}
+                  onPress={() => router.push('/')}
+                />
+              )}
+              <ItemBarra
+                icone="person-outline"
+                rotulo="Portal do paciente"
+                aberto={aberto}
+                ativo={pathname.startsWith('/portal')}
+                cores={cores}
+                onPress={() => router.push('/portal')}
+              />
+            </>
+          )}
         </View>
+
+        {papelReal === 'admin_geral' && aberto && (
+          <View className="px-1 pb-2">
+            <Text
+              className="text-secundario font-semibold uppercase mb-1 px-1"
+              style={{ fontSize: 10, letterSpacing: 0.8 }}>
+              Ver como
+            </Text>
+            <View className="flex-row flex-wrap gap-1">
+              {(
+                [
+                  ['admin', 'Admin'],
+                  ['fisioterapeuta', 'Fisio'],
+                  ['estagiario', 'Estag.'],
+                  ['paciente', 'Pac.'],
+                ] as [VisaoSimulada, string][]
+              ).map(([v, r]) => {
+                const on = simulando === v;
+                return (
+                  <Pressable
+                    key={v}
+                    onPress={() => definirVisao(on ? null : v)}
+                    className={`rounded-lg px-2 py-1 ${
+                      on ? 'bg-primaria' : 'bg-fundo border border-borda'
+                    }`}>
+                    <Text
+                      className={`font-semibold ${on ? 'text-white' : 'text-secundario'}`}
+                      style={{ fontSize: 11 }}>
+                      {r}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {aberto ? (
           <View className="flex-row gap-1 px-1">
@@ -141,8 +229,19 @@ export default function WebShell() {
       </Animated.View>
 
       <View className="flex-1 bg-fundo">
-        <View className="flex-1 w-full self-center" style={{ maxWidth: 1100 }}>
-          <Slot />
+        {/* Conteúdo centralizado, com um teto largo para aproveitar monitores
+            grandes. As telas internas ainda limitam a própria largura. */}
+        <View className="flex-1 w-full self-center px-6" style={{ maxWidth: LARGURA_CONTEUDO }}>
+          {emPaginaInterna && (
+            <Pressable
+              onPress={voltar}
+              accessibilityLabel="Voltar"
+              className="flex-row items-center gap-1 px-4 pt-3 pb-1 self-start">
+              <Ionicons name="chevron-back" size={18} color={cores.primaria} />
+              <Text className="text-primaria font-medium">Voltar</Text>
+            </Pressable>
+          )}
+          {children ?? <Slot />}
         </View>
         <WebFooter />
       </View>

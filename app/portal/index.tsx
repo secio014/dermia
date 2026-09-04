@@ -1,29 +1,69 @@
 import { useCallback, useState } from 'react';
-import { Link, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { palette } from '@/constants/Colors';
+import CartaoClinica from '@/components/portal/CartaoClinica';
 import SecaoHoje from '@/components/portal/SecaoHoje';
 import SecaoEvolucao from '@/components/portal/SecaoEvolucao';
 import SecaoTratamento from '@/components/portal/SecaoTratamento';
+import SecaoConta from '@/components/portal/SecaoConta';
+import BotaoTema from '@/components/ui/BotaoTema';
+import LogoDermia from '@/components/ui/LogoDermia';
+import { usePapelEfetivo } from '@/.lib/acesso';
 import { supabase } from '@/.lib/supabase';
 
-type Aba = 'hoje' | 'evolucao' | 'tratamento';
+type Aba = 'hoje' | 'evolucao' | 'tratamento' | 'conta';
 const ABAS: { id: Aba; rotulo: string }[] = [
   { id: 'hoje', rotulo: 'Hoje' },
   { id: 'evolucao', rotulo: 'Evolução' },
   { id: 'tratamento', rotulo: 'Tratamento' },
+  { id: 'conta', rotulo: 'Conta' },
 ];
 
-export default function PortalPaciente() {
-  const [paciente, setPaciente] = useState<{ id: string; nome: string; desde: string | null } | null>(
-    null
+// O portal do paciente não tem header nativo — só esta barrinha: o ícone e o
+// alternador de tema claro/escuro.
+function TopoPortal() {
+  return (
+    <View className="flex-row items-center justify-between px-4 py-3">
+      <LogoDermia size={24} />
+      <BotaoTema size={20} />
+    </View>
   );
+}
+
+export default function PortalPaciente() {
+  const [paciente, setPaciente] = useState<{
+    id: string;
+    nome: string;
+    desde: string | null;
+    clinicaId: string | null;
+    responsavelId: string | null;
+  } | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [semAcesso, setSemAcesso] = useState(false);
   const [aba, setAba] = useState<Aba>('hoje');
+  const { simulando } = usePapelEfetivo();
+  const modoDemonstracao = simulando === 'paciente';
 
   const carregar = useCallback(async () => {
+    if (modoDemonstracao) {
+      // admin_geral "vendo como Paciente" não tem uma linha própria em
+      // `pacientes` — mostra dados fictícios em vez de bater no banco.
+      setSemAcesso(false);
+      setPaciente({
+        // UUID nulo, só pra bater com o tipo da coluna e as sub-consultas
+        // (paciente_id) não darem erro de sintaxe — nunca vai casar com uma
+        // linha de verdade, então as seções só mostram "nada encontrado".
+        id: '00000000-0000-0000-0000-000000000000',
+        nome: 'Paciente de demonstração',
+        desde: null,
+        clinicaId: null,
+        responsavelId: null,
+      });
+      setCarregando(false);
+      return;
+    }
     const { data: usuario } = await supabase.auth.getUser();
     if (!usuario.user) {
       setSemAcesso(true);
@@ -32,7 +72,7 @@ export default function PortalPaciente() {
     }
     const { data } = await supabase
       .from('pacientes')
-      .select('id, nome_completo, criado_em')
+      .select('id, nome_completo, criado_em, clinica_id, criado_por')
       .eq('user_id', usuario.user.id)
       .single();
     if (!data) {
@@ -41,9 +81,15 @@ export default function PortalPaciente() {
       return;
     }
     setSemAcesso(false);
-    setPaciente({ id: data.id, nome: data.nome_completo, desde: data.criado_em ?? null });
+    setPaciente({
+      id: data.id,
+      nome: data.nome_completo,
+      desde: data.criado_em ?? null,
+      clinicaId: data.clinica_id ?? null,
+      responsavelId: data.criado_por ?? null,
+    });
     setCarregando(false);
-  }, []);
+  }, [modoDemonstracao]);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,57 +97,69 @@ export default function PortalPaciente() {
     }, [carregar])
   );
 
-  if (carregando) {
-    return (
-      <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color={palette.primaria} />
-      </View>
-    );
-  }
-
-  if (semAcesso || !paciente) {
-    return (
-      <View className="flex-1 bg-fundo items-center justify-center px-8">
-        <Text className="text-texto text-center mb-4">
-          Você ainda não tem acesso ao portal, ou a sessão expirou.
-        </Text>
-        <Link href="/portal/login" asChild>
-          <Pressable className="bg-primaria rounded-xl py-3 px-6 items-center">
-            <Text className="text-white font-semibold">Entrar</Text>
-          </Pressable>
-        </Link>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView
-      className="flex-1 bg-fundo px-4 pt-6"
-      contentContainerClassName="w-full max-w-2xl self-center"
-      contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text className="text-texto text-2xl font-bold mb-1">Olá, {paciente.nome}</Text>
-      <Text className="text-secundario mb-4">Seu acompanhamento</Text>
+    <View className="flex-1 bg-fundo">
+      <TopoPortal />
 
-      <View className="flex-row bg-superficie border border-borda rounded-xl p-1 mb-5">
-        {ABAS.map((a) => {
-          const ativo = aba === a.id;
-          return (
-            <Pressable
-              key={a.id}
-              onPress={() => setAba(a.id)}
-              className={`flex-1 py-2 rounded-lg items-center ${ativo ? 'bg-primaria' : ''}`}>
-              <Text
-                className={`text-sm font-semibold ${ativo ? 'text-white' : 'text-secundario'}`}>
-                {a.rotulo}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {carregando ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={palette.primaria} />
+        </View>
+      ) : semAcesso || !paciente ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <LogoDermia size={44} />
+          <Text className="text-texto text-lg font-semibold text-center mt-4 mb-1">
+            Portal do Paciente
+          </Text>
+          <Text className="text-secundario text-center mb-6 max-w-sm">
+            Esta conta não tem acesso ao Portal do Paciente, ou a sessão expirou. Entre com o
+            e-mail e a senha que a sua clínica te passou.
+          </Text>
+          <Pressable
+            onPress={async () => {
+              await supabase.auth.signOut();
+              router.replace('/login');
+            }}
+            className="bg-primaria rounded-xl py-3 px-6 items-center mb-3">
+            <Text className="text-white font-semibold">Entrar com outra conta</Text>
+          </Pressable>
+          <Pressable onPress={() => router.replace('/')} className="py-2">
+            <Text className="text-primaria font-medium">Voltar ao site</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <ScrollView
+          className="flex-1 px-4 pt-2"
+          contentContainerClassName="w-full max-w-2xl self-center"
+          contentContainerStyle={{ paddingBottom: 40 }}>
+          <Text className="text-texto text-2xl font-bold mb-1">Olá, {paciente.nome}</Text>
+          <Text className="text-secundario mb-4">Seu acompanhamento</Text>
 
-      {aba === 'hoje' && <SecaoHoje pacienteId={paciente.id} />}
-      {aba === 'evolucao' && <SecaoEvolucao pacienteId={paciente.id} desde={paciente.desde} />}
-      {aba === 'tratamento' && <SecaoTratamento pacienteId={paciente.id} />}
-    </ScrollView>
+          <CartaoClinica clinicaId={paciente.clinicaId} responsavelId={paciente.responsavelId} />
+
+          <View className="flex-row bg-superficie border border-borda rounded-xl p-1 mb-5">
+            {ABAS.map((a) => {
+              const ativo = aba === a.id;
+              return (
+                <Pressable
+                  key={a.id}
+                  onPress={() => setAba(a.id)}
+                  className={`flex-1 py-2 rounded-lg items-center ${ativo ? 'bg-primaria' : ''}`}>
+                  <Text
+                    className={`text-sm font-semibold ${ativo ? 'text-white' : 'text-secundario'}`}>
+                    {a.rotulo}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {aba === 'hoje' && <SecaoHoje pacienteId={paciente.id} />}
+          {aba === 'evolucao' && <SecaoEvolucao pacienteId={paciente.id} desde={paciente.desde} />}
+          {aba === 'tratamento' && <SecaoTratamento pacienteId={paciente.id} />}
+          {aba === 'conta' && <SecaoConta />}
+        </ScrollView>
+      )}
+    </View>
   );
 }

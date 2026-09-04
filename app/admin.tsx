@@ -15,6 +15,7 @@ import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
 import { avisar } from '@/.lib/aviso';
 import { rotuloEtapaFeedback } from '@/.lib/feedback';
+import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
@@ -66,6 +67,7 @@ export default function TelaAdmin() {
 
 function PainelAdmin() {
   const { cores } = useTema();
+  const largo = useLargo();
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [resumoFeedback, setResumoFeedback] = useState<ResumoFeedbackEtapa[]>([]);
   const [pacientes, setPacientes] = useState<PacienteAdmin[]>([]);
@@ -75,9 +77,16 @@ function PainelAdmin() {
   const [novoNome, setNovoNome] = useState('');
   const [novoEmail, setNovoEmail] = useState('');
   const [novoRegistro, setNovoRegistro] = useState('');
+  const [novoPapel, setNovoPapel] = useState<'fisioterapeuta' | 'estagiario' | 'admin'>(
+    'fisioterapeuta'
+  );
   const [cadastrando, setCadastrando] = useState(false);
   const [erroEquipe, setErroEquipe] = useState<string | null>(null);
-  const [senhaNovoFisio, setSenhaNovoFisio] = useState<{ email: string; senha: string } | null>(null);
+  const [senhaNovoFisio, setSenhaNovoFisio] = useState<{
+    email: string;
+    senha: string;
+    papel: string;
+  } | null>(null);
   const [excluindo, setExcluindo] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
@@ -170,7 +179,7 @@ function PainelAdmin() {
     const nome = novoNome.trim();
     const email = novoEmail.trim().toLowerCase();
     if (nome.length < 2) {
-      setErroEquipe('Informe o nome completo do fisioterapeuta.');
+      setErroEquipe('Informe o nome completo do novo membro.');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -185,17 +194,22 @@ function PainelAdmin() {
     setSenhaNovoFisio(null);
     setCadastrando(true);
     const { data, error } = await supabase.functions.invoke('criar-fisioterapeuta', {
-      body: { nome, email, registro: novoRegistro.trim() || null },
+      body: { nome, email, registro: novoRegistro.trim() || null, papel: novoPapel },
     });
     setCadastrando(false);
     if (error) {
       setErroEquipe(error.message);
       return;
     }
-    setSenhaNovoFisio({ email: data.email, senha: data.senha_temporaria });
+    setSenhaNovoFisio({
+      email: data.email,
+      senha: data.senha_temporaria,
+      papel: data.papel ?? novoPapel,
+    });
     setNovoNome('');
     setNovoEmail('');
     setNovoRegistro('');
+    setNovoPapel('fisioterapeuta');
     carregar();
   }
 
@@ -229,7 +243,7 @@ function PainelAdmin() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-2xl self-center"
+      contentContainerClassName="w-full max-w-4xl self-center"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Text className="text-texto text-xl font-bold mb-4">Painel de Admin</Text>
 
@@ -275,19 +289,46 @@ function PainelAdmin() {
 
       {/* ── Equipe ─────────────────────────────────────────────── */}
       <Text className="text-texto font-semibold mt-8 mb-2">Equipe</Text>
-      {equipe.map((m) => (
-        <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
-          <Text className="text-texto font-semibold">{m.nome}</Text>
-          <Text className="text-secundario text-xs">
-            {m.papel}
-            {m.email ? ` · ${m.email}` : ''}
-            {m.ativo ? '' : ' · inativo'}
-          </Text>
+      <View className={largo ? 'flex-row gap-4 items-start' : ''}>
+        <View className={largo ? 'flex-1' : ''}>
+          {equipe.map((m) => (
+            <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
+              <Text className="text-texto font-semibold">{m.nome}</Text>
+              <Text className="text-secundario text-xs">
+                {m.papel}
+                {m.email ? ` · ${m.email}` : ''}
+                {m.ativo ? '' : ' · inativo'}
+              </Text>
+            </View>
+          ))}
         </View>
-      ))}
 
-      <View className="bg-superficie border border-borda rounded-xl p-4 mt-1">
-        <Text className="text-texto font-semibold mb-2">Cadastrar fisioterapeuta</Text>
+        <View className={`bg-superficie border border-borda rounded-xl p-4 mt-1 ${largo ? 'flex-1' : ''}`}>
+        <Text className="text-texto font-semibold mb-2">Cadastrar membro da equipe</Text>
+        <View className="flex-row gap-1 mb-2">
+          {(
+            [
+              ['fisioterapeuta', 'Fisioterapeuta'],
+              ['estagiario', 'Estagiário'],
+              ['admin', 'Admin da clínica'],
+            ] as ['fisioterapeuta' | 'estagiario' | 'admin', string][]
+          ).map(([valor, rotulo]) => {
+            const on = novoPapel === valor;
+            return (
+              <Pressable
+                key={valor}
+                onPress={() => setNovoPapel(valor)}
+                className={`flex-1 items-center rounded-lg py-2 ${
+                  on ? 'bg-primaria' : 'bg-fundo border border-borda'
+                }`}>
+                <Text
+                  className={`text-xs font-semibold ${on ? 'text-white' : 'text-secundario'}`}>
+                  {rotulo}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
         <TextInput
           value={novoNome}
           onChangeText={setNovoNome}
@@ -325,13 +366,17 @@ function PainelAdmin() {
         {senhaNovoFisio && (
           <View className="border border-ok rounded-xl p-3 mt-3">
             <Text className="text-texto font-semibold mb-1">Acesso criado!</Text>
-            <Text className="text-secundario text-xs mb-1">Repasse ao novo fisioterapeuta:</Text>
+            <Text className="text-secundario text-xs mb-1">
+              Repasse ao novo membro ({senhaNovoFisio.papel}). Ele troca a senha depois em
+              Ajustes › Segurança.
+            </Text>
             <Text selectable className="text-texto text-xs">E-mail: {senhaNovoFisio.email}</Text>
             <Text selectable className="text-texto text-xs">
               Senha temporária: {senhaNovoFisio.senha}
             </Text>
           </View>
         )}
+        </View>
       </View>
 
       {/* ── Pacientes ──────────────────────────────────────────── */}

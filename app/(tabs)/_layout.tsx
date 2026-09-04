@@ -1,13 +1,16 @@
 import { Platform, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Slot, Tabs } from 'expo-router';
 
 import { ITENS_NAV } from '@/components/nav/itens';
-import WebShell from '@/components/nav/WebShell';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useTema } from '@/.lib/tema';
+
+export const unstable_settings = {
+  initialRouteName: 'painel',
+};
 
 export default function TabLayout() {
   const { width } = useWindowDimensions();
@@ -15,8 +18,10 @@ export default function TabLayout() {
   const mostrarHeader = useClientOnlyValue(false, true);
   const larguraWeb = Platform.OS === 'web' && width >= 768;
 
+  // Na web larga o menu lateral (WebShell) vem do _layout raiz — aqui só
+  // renderizamos a tela da aba atual, sem chrome.
   if (larguraWeb) {
-    return <WebShell />;
+    return <Slot />;
   }
 
   return (
@@ -28,7 +33,7 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: cores.superficie },
         headerTintColor: cores.texto,
         headerShown: mostrarHeader,
-        headerTitle: 'Derm.IA',
+        headerTitle: 'DermIA',
         headerRight: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
             <BotaoTema size={20} />
@@ -42,7 +47,7 @@ export default function TabLayout() {
           name={item.nome}
           options={{
             title: item.titulo,
-            headerTitle: 'Derm.IA',
+            headerTitle: 'DermIA',
             tabBarIcon: ({ color }) => <Ionicons name={item.icone} size={24} color={color} />,
           }}
         />

@@ -187,7 +187,7 @@ export default function EvolucaoLesao() {
       className="flex-1 bg-fundo px-4 pt-4"
       contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
       contentContainerStyle={{ paddingBottom: 32 }}>
-      <Stack.Screen options={{ headerTitle: 'Derm.IA' }} />
+      <Stack.Screen options={{ headerTitle: 'DermIA' }} />
       <Text className="text-texto text-lg font-bold mb-3">Evolução da lesão</Text>
 
       <Text className="text-texto font-semibold mb-2">Fotos</Text>

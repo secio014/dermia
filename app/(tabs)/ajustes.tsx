@@ -4,13 +4,18 @@ import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { ehAdmin, usePerfilAtual } from '@/.lib/acesso';
+import AlterarSenha from '@/components/ui/AlterarSenha';
+import EditarPerfil from '@/components/ui/EditarPerfil';
+import SemAcesso from '@/components/ui/SemAcesso';
+import { ehAdmin, usePapelEfetivo, usePerfilAtual } from '@/.lib/acesso';
 import { supabase } from '@/.lib/supabase';
 import { useTema, type PreferenciaTema } from '@/.lib/tema';
 
 const ROTULO_PAPEL: Record<string, string> = {
+  admin_geral: 'Admin geral (plataforma)',
   admin: 'Administrador',
   fisioterapeuta: 'Fisioterapeuta',
+  estagiario: 'Estagiário',
 };
 
 const OPCOES: { valor: PreferenciaTema; rotulo: string; icone: keyof typeof Ionicons.glyphMap }[] = [
@@ -33,23 +38,37 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 export default function TelaAjustes() {
   const { preferencia, cores, escolher } = useTema();
   const { perfil } = usePerfilAtual();
+  const { papel: papelEfetivo, papelReal, simulando } = usePapelEfetivo();
   const versao = Constants.expoConfig?.version ?? '1.0.0';
   const canal = Updates.channel ?? 'desenvolvimento';
+
+  // Paciente não tem esta tela no app de verdade (usa a "Conta" do Portal) —
+  // a simulação do admin_geral deve refletir isso em vez de mostrar a tela
+  // profissional por baixo.
+  if (simulando === 'paciente') {
+    return (
+      <SemAcesso mensagem="Nesta visão simulada (paciente) esta área fica indisponível. Use a aba Conta do Portal do Paciente." />
+    );
+  }
 
   return (
     <ScrollView
       className="flex-1 bg-fundo"
-      contentContainerClassName="w-full max-w-2xl self-center p-4">
+      contentContainerClassName="w-full max-w-3xl self-center p-4">
       <Text className="text-texto text-2xl font-bold mb-6">Ajustes</Text>
 
       {perfil && (
         <Secao titulo="Conta">
-          <View className="p-4 gap-1">
-            <Text className="text-texto font-semibold">{perfil.nome}</Text>
-            <Text className="text-secundario text-sm">{perfil.email ?? '—'}</Text>
-            <Text className="text-primaria text-xs font-semibold mt-1">
-              {ROTULO_PAPEL[perfil.papel] ?? perfil.papel}
-            </Text>
+          <View className="p-4">
+            <EditarPerfil />
+            <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-borda">
+              <Text className="text-secundario text-sm">{perfil.email ?? '—'}</Text>
+              <Text className="text-primaria text-xs font-semibold">
+                {(papelEfetivo && (ROTULO_PAPEL[papelEfetivo] ?? papelEfetivo)) ??
+                  ROTULO_PAPEL[perfil.papel] ??
+                  perfil.papel}
+              </Text>
+            </View>
           </View>
           <Pressable
             onPress={() => supabase.auth.signOut()}
@@ -59,7 +78,11 @@ export default function TelaAjustes() {
         </Secao>
       )}
 
-      {ehAdmin(perfil) && (
+      <Secao titulo="Segurança">
+        <AlterarSenha />
+      </Secao>
+
+      {ehAdmin({ papel: papelEfetivo }) && (
         <Secao titulo="Administração">
           <Link href="/admin" asChild>
             <Pressable className="flex-row items-center justify-between px-4 py-3.5">
@@ -125,9 +148,11 @@ export default function TelaAjustes() {
         </View>
       </Secao>
 
-      <Link href="/nav" className="text-primaria font-semibold px-1 py-2">
-        Página de navegação (dev)
-      </Link>
+      {papelReal === 'admin_geral' && (
+        <Link href="/nav" className="text-primaria font-semibold px-1 py-2">
+          Página de navegação (dev)
+        </Link>
+      )}
     </ScrollView>
   );
 }
