@@ -4,6 +4,7 @@ import {
   Redirect,
   Stack,
   ThemeProvider,
+  useRouter,
   useSegments,
   type Theme,
 } from 'expo-router';
@@ -15,7 +16,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import 'react-native-reanimated';
@@ -28,7 +29,7 @@ import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import SemAcesso from '@/components/ui/SemAcesso';
 import { paletas, palette } from '@/constants/Colors';
-import { usePerfilAtual } from '@/.lib/acesso';
+import { usePapelEfetivo, usePerfilAtual } from '@/.lib/acesso';
 import { instalarFonteInter } from '@/.lib/fonte';
 import { useAplicarTema, useTema } from '@/.lib/tema';
 import { LOGIN_DESATIVADO } from '@/.lib/dev';
@@ -105,7 +106,9 @@ export default function RootLayout() {
   const { sessao, carregando } = useSessao();
   const semSessaoConfirmada = useSemSessaoConfirmada(sessao);
   const { perfil, carregando: carregandoPerfil } = usePerfilAtual();
+  const { papelReal, simulando } = usePapelEfetivo();
   const segmentos = useSegments();
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const [fontesProntas] = useFonts({
     Inter_400Regular,
@@ -123,6 +126,28 @@ export default function RootLayout() {
       document.title = 'DermIA';
     }
   });
+
+  // Ativar "Ver como Paciente" leva o admin_geral pro Portal de verdade (uma
+  // vez, no momento em que liga) em vez de deixar a tela profissional atual
+  // por baixo. Depois disso ele continua livre pra navegar pra qualquer outra
+  // página — o bloqueio de cada uma é o <Protegido> (mesma coisa que acontece
+  // simulando Fisio/Estagiário), não um redirecionamento forçado a cada clique.
+  const simulandoAnteriorRef = useRef<typeof simulando>(null);
+  const vindoDaSimulacaoRef = useRef(false);
+  useEffect(() => {
+    if (papelReal === 'admin_geral') {
+      const raizAtual = segmentos[0] as string | undefined;
+      const acabouDeAtivar = simulando === 'paciente' && simulandoAnteriorRef.current !== 'paciente';
+      if (acabouDeAtivar && raizAtual !== 'portal') {
+        vindoDaSimulacaoRef.current = true;
+        router.replace('/portal');
+      } else if (simulando !== 'paciente' && raizAtual === 'portal' && vindoDaSimulacaoRef.current) {
+        vindoDaSimulacaoRef.current = false;
+        router.replace('/painel');
+      }
+    }
+    simulandoAnteriorRef.current = simulando;
+  }, [papelReal, simulando, segmentos, router]);
 
   if (carregando || !fontesProntas) {
     return (
@@ -143,7 +168,14 @@ export default function RootLayout() {
 
   // Na web larga a área profissional inteira fica dentro do menu lateral
   // (WebShell) — sem o header nativo em cima. A landing, o login e o portal ficam de fora.
-  const usarShell = Platform.OS === 'web' && width >= 768 && !rotaPublica;
+  // Exceção: o admin_geral continua com acesso livre ao menu mesmo no Site (`/`)
+  // e no Portal (visitando ou "vendo como Paciente") — só quem não tem papel
+  // nenhum (visitante do site, paciente de verdade) vê essas rotas "peladas".
+  const usarShell =
+    Platform.OS === 'web' &&
+    width >= 768 &&
+    (!rotaPublica ||
+      ((raiz === 'portal' || raiz == null || raiz === 'index') && papelReal === 'admin_geral'));
 
   if (!LOGIN_DESATIVADO && !sessao && !rotaPublica) {
     // Ainda pode ser a janela pós-login em que o evento SIGNED_IN não chegou —

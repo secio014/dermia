@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
 import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
@@ -41,7 +42,15 @@ function hhmm(iso: string): string {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function TelaAgenda() {
+export default function Agenda() {
+  return (
+    <Protegido permissao="gerenciar_pacientes">
+      <TelaAgenda />
+    </Protegido>
+  );
+}
+
+function TelaAgenda() {
   const { cores } = useTema();
   const largo = useLargo();
   const [ref, setRef] = useState(() => new Date());

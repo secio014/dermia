@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     .select('papel')
     .eq('id', usuario.user.id)
     .single();
-  if (perfil?.papel !== 'admin') {
+  if (perfil?.papel !== 'admin' && perfil?.papel !== 'admin_geral') {
     return json({ error: 'Ação restrita a administradores.' }, 403);
   }
 

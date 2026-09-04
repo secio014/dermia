@@ -17,7 +17,7 @@ const LARGURA_ABERTA = 240;
 const LARGURA_FECHADA = 64;
 
 // Rotas de topo (destinos fixos do menu) — nelas não aparece o "‹ Voltar".
-const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin', '/global'];
+const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin', '/global', '/portal'];
 
 /**
  * Layout da web em telas largas (>= 768px): barra lateral à esquerda (recolhível
@@ -36,7 +36,7 @@ export default function WebShell({ children }: { children?: ReactNode }) {
     else router.replace('/painel');
   }
   const { cores, preferencia, escolher } = useTema();
-  const { papel, papelReal, simulando } = usePapelEfetivo();
+  const { papelReal, simulando } = usePapelEfetivo();
   const [aberto, setAberto] = useState(true);
   const larguraAnim = useRef(new Animated.Value(LARGURA_ABERTA)).current;
 
@@ -113,7 +113,7 @@ export default function WebShell({ children }: { children?: ReactNode }) {
             );
           })}
 
-          {papelReal === 'admin_geral' && !simulando && (
+          {papelReal === 'admin_geral' && (
             <ItemBarra
               icone="planet-outline"
               rotulo="Visão global"
@@ -124,7 +124,7 @@ export default function WebShell({ children }: { children?: ReactNode }) {
             />
           )}
 
-          {(papel === 'admin' || papel === 'admin_geral') && (
+          {(papelReal === 'admin' || papelReal === 'admin_geral') && (
             <ItemBarra
               icone="shield-checkmark-outline"
               rotulo="Admin"
@@ -135,17 +135,22 @@ export default function WebShell({ children }: { children?: ReactNode }) {
             />
           )}
 
-          {__DEV__ && (
+          {/* Estes atalhos de dev usam o papel REAL (não o efetivo/simulado):
+              o admin_geral precisa navegar livremente mesmo "vendo como"
+              outro papel, sem que a simulação esconda seu próprio menu. */}
+          {__DEV__ && (papelReal === 'admin' || papelReal === 'admin_geral') && (
             <>
               <View className="h-2" />
-              <ItemBarra
-                icone="globe-outline"
-                rotulo="Site"
-                aberto={aberto}
-                ativo={pathname === '/'}
-                cores={cores}
-                onPress={() => router.push('/')}
-              />
+              {papelReal === 'admin_geral' && (
+                <ItemBarra
+                  icone="globe-outline"
+                  rotulo="Site"
+                  aberto={aberto}
+                  ativo={pathname === '/'}
+                  cores={cores}
+                  onPress={() => router.push('/')}
+                />
+              )}
               <ItemBarra
                 icone="person-outline"
                 rotulo="Portal do paciente"

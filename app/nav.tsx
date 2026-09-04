@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Stack } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
+import Protegido from '@/components/Protegido';
 import { supabase } from '@/.lib/supabase';
 
 // Página de navegação sem estilo — lista todas as rotas do app para
@@ -35,6 +36,14 @@ function Item({ titulo, href }: { titulo: string; href: string }) {
 }
 
 export default function Navegacao() {
+  return (
+    <Protegido papel="admin_geral">
+      <TelaNavegacao />
+    </Protegido>
+  );
+}
+
+function TelaNavegacao() {
   const [ids, setIds] = useState<Ids>({ pacienteId: null, lesaoId: null, analiseId: null });
 
   useEffect(() => {

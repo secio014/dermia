@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Linking, Text, View } from 'react-native';
+import { Image, Linking, Text, View } from 'react-native';
 
 import { exibirTelefone } from '@/.lib/telefone';
 import { useTema } from '@/.lib/tema';
@@ -11,7 +11,12 @@ import { supabase } from '@/.lib/supabase';
 // (ver dermia_schema_source_of_truth) — lê os campos de forma defensiva.
 
 type Clinica = Record<string, unknown> | null;
-type Profissional = { nome: string; papel: string } | null;
+type Profissional = {
+  nome: string;
+  papel: string;
+  foto_url: string | null;
+  biografia: string | null;
+} | null;
 
 function textoClinica(c: Record<string, unknown>): {
   nome: string;
@@ -52,7 +57,11 @@ export default function CartaoClinica({
           ? supabase.from('clinicas').select('*').eq('id', clinicaId).maybeSingle()
           : Promise.resolve({ data: null }),
         responsavelId
-          ? supabase.from('profissionais').select('nome, papel').eq('id', responsavelId).maybeSingle()
+          ? supabase
+              .from('profissionais')
+              .select('nome, papel, foto_url, biografia')
+              .eq('id', responsavelId)
+              .maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       if (!vivo) return;
@@ -88,12 +97,24 @@ export default function CartaoClinica({
         </Text>
       )}
       {responsavel && (
-        <View className="flex-row items-center gap-2 mt-1">
-          <Ionicons name="person-outline" size={16} color={cores.secundario} />
-          <Text className="text-secundario text-xs">
-            Responsável: <Text className="text-texto font-semibold">{responsavel.nome}</Text> ·{' '}
-            {rotuloPapel(responsavel.papel)}
-          </Text>
+        <View className="flex-row items-center gap-3 mt-2">
+          {responsavel.foto_url ? (
+            <Image
+              source={{ uri: responsavel.foto_url }}
+              style={{ width: 40, height: 40, borderRadius: 20 }}
+            />
+          ) : (
+            <Ionicons name="person-circle-outline" size={40} color={cores.secundario} />
+          )}
+          <View className="flex-1">
+            <Text className="text-secundario text-xs">
+              Responsável: <Text className="text-texto font-semibold">{responsavel.nome}</Text> ·{' '}
+              {rotuloPapel(responsavel.papel)}
+            </Text>
+            {responsavel.biografia && (
+              <Text className="text-secundario text-xs mt-0.5">{responsavel.biografia}</Text>
+            )}
+          </View>
         </View>
       )}
     </View>

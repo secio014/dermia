@@ -14,7 +14,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { json, preflight } from '../_shared/cors.ts';
 
-const PAPEIS_CRIAVEIS = ['fisioterapeuta', 'estagiario', 'admin'];
+const PAPEIS_CRIAVEIS = ['fisioterapeuta', 'estagiario', 'admin', 'admin_geral'];
 
 function gerarSenhaTemporaria(): string {
   return (
@@ -67,11 +67,22 @@ Deno.serve(async (req) => {
   if (!PAPEIS_CRIAVEIS.includes(papel)) {
     return json({ error: 'papel inválido.' }, 400);
   }
+  // Só um admin_geral pode criar outro admin_geral — um admin de clínica não
+  // pode se auto-promover a esse nível pedindo o papel certo no body.
+  if (papel === 'admin_geral' && admin.papel !== 'admin_geral') {
+    return json({ error: 'Só um admin geral pode criar outro admin geral.' }, 403);
+  }
 
-  // 'admin_geral' escolhe a clínica; 'admin' fica preso à própria.
+  // 'admin_geral' escolhe a clínica; 'admin' fica preso à própria. Um novo
+  // usuário 'admin_geral' não precisa de clínica nenhuma — é papel de
+  // plataforma, não de uma clínica específica.
   const clinicaAlvo =
-    admin.papel === 'admin_geral' ? (clinicaBruta ?? admin.clinica_id) : admin.clinica_id;
-  if (!clinicaAlvo) {
+    papel === 'admin_geral'
+      ? null
+      : admin.papel === 'admin_geral'
+        ? (clinicaBruta ?? admin.clinica_id)
+        : admin.clinica_id;
+  if (papel !== 'admin_geral' && !clinicaAlvo) {
     return json({ error: 'Informe a clínica do novo usuário.' }, 400);
   }
 

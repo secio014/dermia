@@ -10,6 +10,7 @@ import SecaoTratamento from '@/components/portal/SecaoTratamento';
 import SecaoConta from '@/components/portal/SecaoConta';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
+import { usePapelEfetivo } from '@/.lib/acesso';
 import { supabase } from '@/.lib/supabase';
 
 type Aba = 'hoje' | 'evolucao' | 'tratamento' | 'conta';
@@ -42,8 +43,27 @@ export default function PortalPaciente() {
   const [carregando, setCarregando] = useState(true);
   const [semAcesso, setSemAcesso] = useState(false);
   const [aba, setAba] = useState<Aba>('hoje');
+  const { simulando } = usePapelEfetivo();
+  const modoDemonstracao = simulando === 'paciente';
 
   const carregar = useCallback(async () => {
+    if (modoDemonstracao) {
+      // admin_geral "vendo como Paciente" não tem uma linha própria em
+      // `pacientes` — mostra dados fictícios em vez de bater no banco.
+      setSemAcesso(false);
+      setPaciente({
+        // UUID nulo, só pra bater com o tipo da coluna e as sub-consultas
+        // (paciente_id) não darem erro de sintaxe — nunca vai casar com uma
+        // linha de verdade, então as seções só mostram "nada encontrado".
+        id: '00000000-0000-0000-0000-000000000000',
+        nome: 'Paciente de demonstração',
+        desde: null,
+        clinicaId: null,
+        responsavelId: null,
+      });
+      setCarregando(false);
+      return;
+    }
     const { data: usuario } = await supabase.auth.getUser();
     if (!usuario.user) {
       setSemAcesso(true);
@@ -69,7 +89,7 @@ export default function PortalPaciente() {
       responsavelId: data.criado_por ?? null,
     });
     setCarregando(false);
-  }, []);
+  }, [modoDemonstracao]);
 
   useFocusEffect(
     useCallback(() => {

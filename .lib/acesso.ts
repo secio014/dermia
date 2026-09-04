@@ -28,6 +28,8 @@ export type PerfilAtual = {
   email: string | null;
   papel: Papel;
   ativo: boolean;
+  foto_url: string | null;
+  biografia: string | null;
 };
 
 /**
@@ -148,7 +150,7 @@ async function carregarPerfil() {
 
   const { data, error } = await supabase
     .from('profissionais')
-    .select('id, clinica_id, nome, email, papel, ativo')
+    .select('id, clinica_id, nome, email, papel, ativo, foto_url, biografia')
     .eq('id', usuario.user.id)
     .maybeSingle();
 

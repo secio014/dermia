@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import PacienteCard, { type PainelPaciente } from '@/components/PacienteCard';
+import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
@@ -61,7 +62,15 @@ type SemLesao = {
   situacao: 'curado' | 'sem_lesao';
 };
 
-export default function TelaInicio() {
+export default function Painel() {
+  return (
+    <Protegido permissao="gerenciar_pacientes">
+      <TelaInicio />
+    </Protegido>
+  );
+}
+
+function TelaInicio() {
   const { cores } = useTema();
   const [pacientes, setPacientes] = useState<PainelPaciente[]>([]);
   const [semLesao, setSemLesao] = useState<SemLesao[]>([]);

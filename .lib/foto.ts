@@ -35,6 +35,30 @@ export async function processarEEnviarFoto(uri: string, clinicaId: string, lesao
   return { caminho, hash };
 }
 
+// Foto de perfil de um profissional — bucket público (`fotos-perfil`), uma
+// foto por pessoa (sobrescreve sempre no mesmo caminho). Diferente da foto de
+// lesão: não é dado clínico, então não precisa de signed URL nem hash.
+export async function enviarFotoDePerfil(uri: string, profissionalId: string): Promise<string> {
+  const processada = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 480 } }], {
+    compress: 0.85,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+
+  const resposta = await fetch(processada.uri);
+  const blob = await resposta.blob();
+  const caminho = `${profissionalId}/foto.jpg`;
+
+  const { error } = await supabase.storage
+    .from('fotos-perfil')
+    .upload(caminho, blob, { contentType: 'image/jpeg', upsert: true });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('fotos-perfil').getPublicUrl(caminho);
+  // Cache-bust: o caminho não muda entre trocas de foto, então sem isso o
+  // navegador/CDN pode continuar servindo a versão antiga.
+  return `${data.publicUrl}?v=${Date.now()}`;
+}
+
 export async function obterUrlAssinada(caminho: string): Promise<string | null> {
   const { data } = await supabase.storage.from('fotos-lesoes').createSignedUrl(caminho, 60 * 10);
   return data?.signedUrl ?? null;
