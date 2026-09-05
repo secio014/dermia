@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
@@ -13,14 +13,23 @@ import {
 
 import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
+import { usePerfilAtual } from '@/.lib/acesso';
 import { avisar } from '@/.lib/aviso';
-import { rotuloEtapaFeedback } from '@/.lib/feedback';
+import { ROTULO_TIPO, TIPOS_INSTITUICAO, tipoClinica, type TipoInstituicao } from '@/.lib/instituicoes';
 import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
 type PacienteAdmin = { id: string; nome_completo: string; codigo_pseudonimo: string };
-type MembroEquipe = { id: string; nome: string; papel: string; email: string | null; ativo: boolean };
+type MembroEquipe = {
+  id: string;
+  nome: string;
+  papel: string;
+  email: string | null;
+  ativo: boolean;
+  clinica_id?: string | null;
+};
+type InstituicaoResumo = { id: string; nome: string; tipo: TipoInstituicao };
 
 function confirmar(mensagem: string): Promise<boolean> {
   if (Platform.OS === 'web') {
@@ -39,13 +48,6 @@ type Indicadores = {
   pacientesCriticos: number;
   adesaoMedia: number | null;
   tempoMedioCicatrizacaoDias: number | null;
-};
-
-type ResumoFeedbackEtapa = {
-  etapa: string;
-  quantidade: number;
-  notaMedia: number | null;
-  tempoMedioSegundos: number | null;
 };
 
 function CartaoIndicador({ titulo, valor }: { titulo: string; valor: string }) {
@@ -68,10 +70,14 @@ export default function TelaAdmin() {
 function PainelAdmin() {
   const { cores } = useTema();
   const largo = useLargo();
+  const { perfil } = usePerfilAtual();
+  // `admin_geral` administra a plataforma, não uma clínica — não tem
+  // `clinica_id` e não faz parte da equipe de clínica nenhuma.
+  const clinicaId = perfil?.clinica_id ?? null;
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
-  const [resumoFeedback, setResumoFeedback] = useState<ResumoFeedbackEtapa[]>([]);
   const [pacientes, setPacientes] = useState<PacienteAdmin[]>([]);
   const [equipe, setEquipe] = useState<MembroEquipe[]>([]);
+  const [instituicoes, setInstituicoes] = useState<InstituicaoResumo[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   const [novoNome, setNovoNome] = useState('');
@@ -100,26 +106,45 @@ function PainelAdmin() {
       { data: painel },
       { data: adesoes },
       { data: lesoesResolvidas },
-      { data: feedbacks },
       { data: listaPacientes },
       { data: listaEquipe },
+      { data: listaInstituicoes },
     ] = await Promise.all([
       supabase.from('vw_painel_pacientes').select('prioridade'),
       supabase.from('vw_adesao_exercicios').select('adesao_percentual'),
       supabase.from('lesoes').select('data_ocorrencia, atualizado_em').neq('status', 'ativa'),
-      supabase.from('feedback_piloto').select('etapa, nota, tempo_gasto_segundos'),
       supabase
         .from('pacientes')
         .select('id, nome_completo, codigo_pseudonimo')
         .order('nome_completo', { ascending: true }),
-      supabase
-        .from('profissionais')
-        .select('id, nome, papel, email, ativo')
-        .order('nome', { ascending: true }),
+      // Admin de clínica vê só a própria equipe. `admin_geral` não tem
+      // clínica — mas tem acesso total, então vê a equipe de todas as
+      // clínicas (menos outras contas admin_geral, que não são "equipe").
+      clinicaId
+        ? supabase
+            .from('profissionais')
+            .select('id, nome, papel, email, ativo, clinica_id')
+            .eq('clinica_id', clinicaId)
+            .order('nome', { ascending: true })
+        : supabase
+            .from('profissionais')
+            .select('id, nome, papel, email, ativo, clinica_id')
+            .neq('papel', 'admin_geral')
+            .order('nome', { ascending: true }),
+      // Só precisa do tipo de cada instituição pra agrupar a equipe do
+      // admin_geral — o próprio admin de clínica não usa isto.
+      clinicaId ? Promise.resolve({ data: [] }) : supabase.from('clinicas').select('*'),
     ]);
 
     setPacientes((listaPacientes as PacienteAdmin[]) ?? []);
     setEquipe((listaEquipe as MembroEquipe[]) ?? []);
+    setInstituicoes(
+      ((listaInstituicoes as Record<string, unknown>[]) ?? []).map((c) => ({
+        id: c.id as string,
+        nome: (c.nome as string) ?? (c.id as string),
+        tipo: tipoClinica(c),
+      }))
+    );
 
     const adesoesValidas = (adesoes ?? []).map((a) => a.adesao_percentual).filter((v): v is number => v != null);
     const adesaoMedia =
@@ -146,34 +171,37 @@ function PainelAdmin() {
       tempoMedioCicatrizacaoDias,
     });
 
-    const porEtapa = new Map<string, { nota: number[]; tempo: number[]; total: number }>();
-    for (const f of feedbacks ?? []) {
-      const atual = porEtapa.get(f.etapa) ?? { nota: [], tempo: [], total: 0 };
-      atual.total += 1;
-      if (f.nota != null) atual.nota.push(f.nota);
-      if (f.tempo_gasto_segundos != null) atual.tempo.push(f.tempo_gasto_segundos);
-      porEtapa.set(f.etapa, atual);
-    }
-    const media = (lista: number[]) =>
-      lista.length > 0 ? Math.round((lista.reduce((s, v) => s + v, 0) / lista.length) * 10) / 10 : null;
-
-    setResumoFeedback(
-      Array.from(porEtapa.entries()).map(([etapa, v]) => ({
-        etapa,
-        quantidade: v.total,
-        notaMedia: media(v.nota),
-        tempoMedioSegundos: v.tempo.length > 0 ? Math.round(v.tempo.reduce((s, x) => s + x, 0) / v.tempo.length) : null,
-      }))
-    );
-
     setCarregando(false);
-  }, []);
+  }, [clinicaId]);
 
   useFocusEffect(
     useCallback(() => {
       carregar();
     }, [carregar])
   );
+
+  // Só usado quando `clinicaId` é nulo (admin_geral): agrupa a equipe de
+  // todas as clínicas por tipo de instituição, pra não virar uma lista única
+  // sem contexto de onde cada um trabalha.
+  const equipePorTipo = useMemo(() => {
+    const nomesPorId = new Map(instituicoes.map((i) => [i.id, i]));
+    const grupos = new Map<TipoInstituicao, { nome: string; membros: MembroEquipe[] }[]>(
+      TIPOS_INSTITUICAO.map((t) => [t, []])
+    );
+    const porInstituicao = new Map<string, MembroEquipe[]>();
+    for (const m of equipe) {
+      const chave = m.clinica_id ?? '';
+      if (!porInstituicao.has(chave)) porInstituicao.set(chave, []);
+      porInstituicao.get(chave)!.push(m);
+    }
+    for (const [id, membros] of porInstituicao) {
+      const inst = nomesPorId.get(id);
+      if (!inst) continue;
+      grupos.get(inst.tipo)!.push({ nome: inst.nome, membros });
+    }
+    for (const lista of grupos.values()) lista.sort((a, b) => a.nome.localeCompare(b.nome));
+    return grupos;
+  }, [equipe, instituicoes]);
 
   async function cadastrarFisio() {
     const nome = novoNome.trim();
@@ -270,113 +298,130 @@ function PainelAdmin() {
         />
       </View>
 
-      <Text className="text-texto font-semibold mt-6 mb-2">Feedback do piloto por etapa</Text>
-      {resumoFeedback.length === 0 ? (
-        <Text className="text-secundario">Nenhum feedback registrado ainda.</Text>
-      ) : (
-        resumoFeedback.map((r) => (
-          <View key={r.etapa} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
-            <Text className="text-texto font-semibold mb-1">{rotuloEtapaFeedback(r.etapa)}</Text>
-            <Text className="text-secundario text-xs">
-              {r.quantidade} registro(s) · Nota média: {r.notaMedia ?? '—'}
-              {r.tempoMedioSegundos != null
-                ? ` · Tempo médio: ${Math.floor(r.tempoMedioSegundos / 60)}min ${r.tempoMedioSegundos % 60}s`
-                : ''}
-            </Text>
-          </View>
-        ))
-      )}
-
       {/* ── Equipe ─────────────────────────────────────────────── */}
-      <Text className="text-texto font-semibold mt-8 mb-2">Equipe</Text>
+      <Text className="text-texto font-semibold mt-8 mb-2">
+        Equipe {clinicaId == null && `(${equipe.length})`}
+      </Text>
+      {clinicaId == null && (
+        <Text className="text-secundario text-xs mb-2">
+          Você administra a plataforma — vê a equipe de todas as instituições, por tipo. Cadastro
+          de membros é feito dentro de cada instituição, na Visão global.
+        </Text>
+      )}
       <View className={largo ? 'flex-row gap-4 items-start' : ''}>
         <View className={largo ? 'flex-1' : ''}>
-          {equipe.map((m) => (
-            <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
-              <Text className="text-texto font-semibold">{m.nome}</Text>
-              <Text className="text-secundario text-xs">
-                {m.papel}
-                {m.email ? ` · ${m.email}` : ''}
-                {m.ativo ? '' : ' · inativo'}
-              </Text>
-            </View>
-          ))}
+          {clinicaId == null
+            ? TIPOS_INSTITUICAO.map((tipo) => {
+                const grupos = equipePorTipo.get(tipo) ?? [];
+                if (grupos.length === 0) return null;
+                return (
+                  <View key={tipo} className="mb-3">
+                    <Text className="text-secundario text-xs font-semibold uppercase mb-1">
+                      {ROTULO_TIPO[tipo]}
+                    </Text>
+                    {grupos.map((g) => (
+                      <View key={g.nome} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
+                        <Text className="text-texto font-semibold mb-1">{g.nome}</Text>
+                        {g.membros.map((m) => (
+                          <Text key={m.id} className="text-secundario text-xs">
+                            {m.nome} — {m.papel}
+                            {m.email ? ` · ${m.email}` : ''}
+                            {m.ativo ? '' : ' · inativo'}
+                          </Text>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                );
+              })
+            : equipe.map((m) => (
+                <View key={m.id} className="bg-superficie border border-borda rounded-xl p-4 mb-2">
+                  <Text className="text-texto font-semibold">{m.nome}</Text>
+                  <Text className="text-secundario text-xs">
+                    {m.papel}
+                    {m.email ? ` · ${m.email}` : ''}
+                    {m.ativo ? '' : ' · inativo'}
+                  </Text>
+                </View>
+              ))}
         </View>
 
-        <View className={`bg-superficie border border-borda rounded-xl p-4 mt-1 ${largo ? 'flex-1' : ''}`}>
-        <Text className="text-texto font-semibold mb-2">Cadastrar membro da equipe</Text>
-        <View className="flex-row gap-1 mb-2">
-          {(
-            [
-              ['fisioterapeuta', 'Fisioterapeuta'],
-              ['estagiario', 'Estagiário'],
-              ['admin', 'Admin da clínica'],
-            ] as ['fisioterapeuta' | 'estagiario' | 'admin', string][]
-          ).map(([valor, rotulo]) => {
-            const on = novoPapel === valor;
-            return (
-              <Pressable
-                key={valor}
-                onPress={() => setNovoPapel(valor)}
-                className={`flex-1 items-center rounded-lg py-2 ${
-                  on ? 'bg-primaria' : 'bg-fundo border border-borda'
-                }`}>
-                <Text
-                  className={`text-xs font-semibold ${on ? 'text-white' : 'text-secundario'}`}>
-                  {rotulo}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <TextInput
-          value={novoNome}
-          onChangeText={setNovoNome}
-          placeholder="Nome completo"
-          placeholderTextColor={cores.secundario}
-          className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
-        />
-        <TextInput
-          value={novoEmail}
-          onChangeText={setNovoEmail}
-          placeholder="E-mail"
-          placeholderTextColor={cores.secundario}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
-        />
-        <TextInput
-          value={novoRegistro}
-          onChangeText={setNovoRegistro}
-          placeholder="Registro no conselho (CREFITO/CRM…) — opcional"
-          placeholderTextColor={cores.secundario}
-          className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
-        />
-        {erroEquipe && <Text className="text-risco mb-2">{erroEquipe}</Text>}
-        <Pressable
-          onPress={cadastrarFisio}
-          disabled={cadastrando}
-          className="bg-primaria rounded-xl py-3 items-center">
-          {cadastrando ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-white font-semibold">Cadastrar</Text>
+        {clinicaId != null && (
+          <View className={`bg-superficie border border-borda rounded-xl p-4 mt-1 ${largo ? 'flex-1' : ''}`}>
+          <Text className="text-texto font-semibold mb-2">Cadastrar membro da equipe</Text>
+          <View className="flex-row gap-1 mb-2">
+            {(
+              [
+                ['fisioterapeuta', 'Fisioterapeuta'],
+                ['estagiario', 'Estagiário'],
+                ['admin', 'Admin da clínica'],
+              ] as ['fisioterapeuta' | 'estagiario' | 'admin', string][]
+            ).map(([valor, rotulo]) => {
+              const on = novoPapel === valor;
+              return (
+                <Pressable
+                  key={valor}
+                  onPress={() => setNovoPapel(valor)}
+                  className={`flex-1 items-center rounded-lg py-2 ${
+                    on ? 'bg-primaria' : 'bg-fundo border border-borda'
+                  }`}>
+                  <Text
+                    className={`text-xs font-semibold ${on ? 'text-white' : 'text-secundario'}`}>
+                    {rotulo}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <TextInput
+            value={novoNome}
+            onChangeText={setNovoNome}
+            placeholder="Nome completo"
+            placeholderTextColor={cores.secundario}
+            className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
+          />
+          <TextInput
+            value={novoEmail}
+            onChangeText={setNovoEmail}
+            placeholder="E-mail"
+            placeholderTextColor={cores.secundario}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
+          />
+          <TextInput
+            value={novoRegistro}
+            onChangeText={setNovoRegistro}
+            placeholder="Registro no conselho (CREFITO/CRM…) — opcional"
+            placeholderTextColor={cores.secundario}
+            className="bg-fundo border border-borda rounded-xl px-4 py-3 mb-2 text-texto"
+          />
+          {erroEquipe && <Text className="text-risco mb-2">{erroEquipe}</Text>}
+          <Pressable
+            onPress={cadastrarFisio}
+            disabled={cadastrando}
+            className="bg-primaria rounded-xl py-3 items-center">
+            {cadastrando ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-white font-semibold">Cadastrar</Text>
+            )}
+          </Pressable>
+          {senhaNovoFisio && (
+            <View className="border border-ok rounded-xl p-3 mt-3">
+              <Text className="text-texto font-semibold mb-1">Acesso criado!</Text>
+              <Text className="text-secundario text-xs mb-1">
+                Repasse ao novo membro ({senhaNovoFisio.papel}). Ele troca a senha depois em
+                Ajustes › Segurança.
+              </Text>
+              <Text selectable className="text-texto text-xs">E-mail: {senhaNovoFisio.email}</Text>
+              <Text selectable className="text-texto text-xs">
+                Senha temporária: {senhaNovoFisio.senha}
+              </Text>
+            </View>
           )}
-        </Pressable>
-        {senhaNovoFisio && (
-          <View className="border border-ok rounded-xl p-3 mt-3">
-            <Text className="text-texto font-semibold mb-1">Acesso criado!</Text>
-            <Text className="text-secundario text-xs mb-1">
-              Repasse ao novo membro ({senhaNovoFisio.papel}). Ele troca a senha depois em
-              Ajustes › Segurança.
-            </Text>
-            <Text selectable className="text-texto text-xs">E-mail: {senhaNovoFisio.email}</Text>
-            <Text selectable className="text-texto text-xs">
-              Senha temporária: {senhaNovoFisio.senha}
-            </Text>
           </View>
         )}
-        </View>
       </View>
 
       {/* ── Pacientes ──────────────────────────────────────────── */}

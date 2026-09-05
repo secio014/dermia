@@ -14,6 +14,7 @@ import {
 import Protegido from '@/components/Protegido';
 import { palette } from '@/constants/Colors';
 import { avisar } from '@/.lib/aviso';
+import { ROTULO_TIPO, TIPOS_INSTITUICAO, tipoClinica, type TipoInstituicao } from '@/.lib/instituicoes';
 import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
@@ -35,7 +36,7 @@ function confirmar(mensagem: string): Promise<boolean> {
 // (supabase/scripts/rls-admin-geral.sql) é o que faz as queries abaixo
 // enxergarem além da própria clínica.
 
-type Clinica = { id: string; nome: string };
+type Clinica = { id: string; nome: string; tipo: TipoInstituicao };
 type Prof = { id: string; nome: string; papel: string; email: string | null; ativo: boolean; clinica_id: string | null };
 type Pac = { id: string; clinica_id: string | null; ativo: boolean | null };
 
@@ -211,28 +212,45 @@ function CriarUsuarioPlataforma({
 function CriarClinica({ aoCriar }: { aoCriar: () => void }) {
   const { cores } = useTema();
   const [nome, setNome] = useState('');
+  const [tipo, setTipo] = useState<TipoInstituicao>('clinica');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   async function criar() {
     setErro(null);
-    if (nome.trim().length < 2) return setErro('Informe o nome da clínica.');
+    if (nome.trim().length < 2) return setErro('Informe o nome da instituição.');
     setSalvando(true);
-    const { error } = await supabase.from('clinicas').insert({ nome: nome.trim() });
+    const { error } = await supabase.from('clinicas').insert({ nome: nome.trim(), tipo });
     setSalvando(false);
     if (error) return setErro(error.message);
     setNome('');
+    setTipo('clinica');
     aoCriar();
   }
 
   return (
     <View className="bg-superficie border border-borda rounded-xl p-4 mb-6">
-      <Text className="text-texto font-semibold mb-2">Cadastrar clínica</Text>
+      <Text className="text-texto font-semibold mb-2">Cadastrar instituição</Text>
+      <View className="flex-row flex-wrap gap-1 mb-2">
+        {TIPOS_INSTITUICAO.map((t) => {
+          const on = tipo === t;
+          return (
+            <Pressable
+              key={t}
+              onPress={() => setTipo(t)}
+              className={`rounded-lg px-3 py-2 ${on ? 'bg-primaria' : 'bg-fundo border border-borda'}`}>
+              <Text className={`text-xs font-semibold ${on ? 'text-white' : 'text-secundario'}`}>
+                {ROTULO_TIPO[t]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
       <View className="flex-row gap-2">
         <TextInput
           value={nome}
           onChangeText={setNome}
-          placeholder="Nome da clínica"
+          placeholder="Nome da instituição"
           placeholderTextColor={cores.secundario}
           className="flex-1 bg-fundo border border-borda rounded-xl px-4 py-3 text-texto"
         />
@@ -248,6 +266,52 @@ function CriarClinica({ aoCriar }: { aoCriar: () => void }) {
         </Pressable>
       </View>
       {erro && <Text className="text-risco text-xs mt-2">{erro}</Text>}
+    </View>
+  );
+}
+
+// Chips pra reclassificar o tipo de uma instituição já cadastrada (a criação
+// já pede o tipo — isto é só para corrigir depois).
+function TipoInstituicaoEditavel({
+  clinicaId,
+  tipo,
+  aoSalvar,
+}: {
+  clinicaId: string;
+  tipo: TipoInstituicao;
+  aoSalvar: () => void;
+}) {
+  const [salvando, setSalvando] = useState<TipoInstituicao | null>(null);
+
+  async function mudar(novoTipo: TipoInstituicao) {
+    if (novoTipo === tipo) return;
+    setSalvando(novoTipo);
+    const { error } = await supabase.from('clinicas').update({ tipo: novoTipo }).eq('id', clinicaId);
+    setSalvando(null);
+    if (error) return avisar(error.message);
+    aoSalvar();
+  }
+
+  return (
+    <View className="flex-row gap-1">
+      {TIPOS_INSTITUICAO.map((t) => {
+        const on = tipo === t;
+        return (
+          <Pressable
+            key={t}
+            onPress={() => mudar(t)}
+            disabled={salvando != null}
+            className={`rounded-lg px-2 py-1 ${on ? 'bg-primaria' : 'bg-fundo border border-borda'}`}>
+            {salvando === t ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text className={`text-xs font-semibold ${on ? 'text-white' : 'text-secundario'}`}>
+                {ROTULO_TIPO[t]}
+              </Text>
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -387,10 +451,10 @@ function LinhaProfissional({ membro, aoMudar }: { membro: Prof; aoMudar: () => v
 
   return (
     <View className="border-t border-borda py-2">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-texto text-sm flex-1 pr-2">{membro.nome}</Text>
+      <View className="flex-row flex-wrap items-center justify-between gap-y-1">
+        <Text className="text-texto text-sm font-medium mr-2">{membro.nome}</Text>
         {!editando ? (
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
             <Text className="text-secundario text-xs">
               {membro.papel}
               {membro.email ? ` · ${membro.email}` : ''}
@@ -498,7 +562,7 @@ function PainelGlobal() {
 
     setClinicas(
       ((cli as Record<string, unknown>[]) ?? [])
-        .map((c) => ({ id: c.id as string, nome: nomeClinica(c) }))
+        .map((c) => ({ id: c.id as string, nome: nomeClinica(c), tipo: tipoClinica(c) }))
         .sort((a, b) => a.nome.localeCompare(b.nome))
     );
     setProfissionais((prof as Prof[]) ?? []);
@@ -512,24 +576,34 @@ function PainelGlobal() {
     }, [carregar])
   );
 
-  const porClinica = useMemo(() => {
-    const mapa = new Map<
-      string,
-      { nome: string; equipe: Prof[]; pacientes: number; real: boolean }
-    >();
-    for (const c of clinicas) mapa.set(c.id, { nome: c.nome, equipe: [], pacientes: 0, real: true });
+  // Agrupado por tipo de instituição (Clínicas/Hospitais/Redes-Grupos) — ajuda
+  // a separar/administrar quando a plataforma cresce. Quem não tem clínica se
+  // divide em dois: `admin_geral` é gente da plataforma, não "sem clínica" de
+  // verdade; qualquer outro caso (não deveria acontecer) cai em "sem clínica".
+  const { porTipo, plataforma, semClinica } = useMemo(() => {
+    type Instituicao = { id: string; nome: string; tipo: TipoInstituicao; equipe: Prof[]; pacientes: number };
+    const mapa = new Map<string, Instituicao>();
+    for (const c of clinicas) mapa.set(c.id, { id: c.id, nome: c.nome, tipo: c.tipo, equipe: [], pacientes: 0 });
 
-    const avulsa = (id: string | null) => {
-      const chave = id ?? 'sem-clinica';
-      if (!mapa.has(chave))
-        mapa.set(chave, { nome: 'Sem clínica', equipe: [], pacientes: 0, real: false });
-      return mapa.get(chave)!;
-    };
+    const plataformaEquipe: Prof[] = [];
+    const orfaos = { equipe: [] as Prof[], pacientes: 0 };
 
-    for (const p of profissionais) avulsa(p.clinica_id).equipe.push(p);
-    for (const p of pacientes) avulsa(p.clinica_id).pacientes += 1;
+    for (const p of profissionais) {
+      if (p.clinica_id && mapa.has(p.clinica_id)) mapa.get(p.clinica_id)!.equipe.push(p);
+      else if (p.papel === 'admin_geral') plataformaEquipe.push(p);
+      else orfaos.equipe.push(p);
+    }
+    for (const p of pacientes) {
+      if (p.clinica_id && mapa.has(p.clinica_id)) mapa.get(p.clinica_id)!.pacientes += 1;
+      else orfaos.pacientes += 1;
+    }
 
-    return Array.from(mapa.entries()).map(([id, v]) => ({ id, ...v }));
+    const instituicoes = Array.from(mapa.values());
+    const porTipo = Object.fromEntries(
+      TIPOS_INSTITUICAO.map((t) => [t, instituicoes.filter((i) => i.tipo === t)])
+    ) as Record<TipoInstituicao, Instituicao[]>;
+
+    return { porTipo, plataforma: plataformaEquipe, semClinica: orfaos };
   }, [clinicas, profissionais, pacientes]);
 
   if (carregando) {
@@ -570,25 +644,60 @@ function PainelGlobal() {
 
       <CriarUsuarioPlataforma clinicas={clinicas} aoCriar={carregar} />
 
-      {porClinica.map((c) => (
-        <View key={c.id} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
+      {TIPOS_INSTITUICAO.map((tipo) => {
+        const lista = porTipo[tipo];
+        if (lista.length === 0) return null;
+        return (
+          <View key={tipo}>
+            <Text className="text-texto font-semibold mt-2 mb-2">{ROTULO_TIPO[tipo]}</Text>
+            {lista.map((c) => (
+              <View key={c.id} className="bg-superficie border border-borda rounded-xl p-4 mb-3">
+                <View className={`${largo ? 'flex-row items-center justify-between' : ''} mb-2`}>
+                  <NomeClinicaEditavel clinicaId={c.id} nome={c.nome} aoSalvar={carregar} />
+                  <Text className="text-secundario text-xs mt-1">
+                    {c.equipe.length} da equipe · {c.pacientes} paciente(s)
+                  </Text>
+                </View>
+                <TipoInstituicaoEditavel clinicaId={c.id} tipo={c.tipo} aoSalvar={carregar} />
+                <View className="mt-2">
+                  {c.equipe.length === 0 ? (
+                    <Text className="text-secundario text-xs">Nenhum profissional cadastrado.</Text>
+                  ) : (
+                    c.equipe.map((m) => <LinhaProfissional key={m.id} membro={m} aoMudar={carregar} />)
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        );
+      })}
+
+      {plataforma.length > 0 && (
+        <View className="bg-superficie border border-borda rounded-xl p-4 mb-3">
+          <Text className="text-texto font-semibold mb-2">Administração da plataforma</Text>
+          <Text className="text-secundario text-xs mb-2">
+            Papel `admin_geral` — não pertence a nenhuma instituição, administra a plataforma
+            inteira.
+          </Text>
+          {plataforma.map((m) => (
+            <LinhaProfissional key={m.id} membro={m} aoMudar={carregar} />
+          ))}
+        </View>
+      )}
+
+      {(semClinica.equipe.length > 0 || semClinica.pacientes > 0) && (
+        <View className="bg-superficie border border-borda rounded-xl p-4 mb-3">
           <View className="flex-row items-center justify-between mb-2">
-            {c.real ? (
-              <NomeClinicaEditavel clinicaId={c.id} nome={c.nome} aoSalvar={carregar} />
-            ) : (
-              <Text className="text-texto font-semibold">{c.nome}</Text>
-            )}
+            <Text className="text-texto font-semibold">Sem instituição</Text>
             <Text className="text-secundario text-xs">
-              {c.equipe.length} da equipe · {c.pacientes} paciente(s)
+              {semClinica.equipe.length} da equipe · {semClinica.pacientes} paciente(s)
             </Text>
           </View>
-          {c.equipe.length === 0 ? (
-            <Text className="text-secundario text-xs">Nenhum profissional cadastrado.</Text>
-          ) : (
-            c.equipe.map((m) => <LinhaProfissional key={m.id} membro={m} aoMudar={carregar} />)
-          )}
+          {semClinica.equipe.map((m) => (
+            <LinhaProfissional key={m.id} membro={m} aoMudar={carregar} />
+          ))}
         </View>
-      ))}
+      )}
     </ScrollView>
   );
 }

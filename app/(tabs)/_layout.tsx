@@ -2,10 +2,13 @@ import { Platform, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Slot, Tabs } from 'expo-router';
 
+import BotaoMenuNav from '@/components/nav/BotaoMenuNav';
+import HeaderPadrao from '@/components/nav/HeaderPadrao';
 import { ITENS_NAV } from '@/components/nav/itens';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { usePapelEfetivo } from '@/.lib/acesso';
 import { useTema } from '@/.lib/tema';
 
 export const unstable_settings = {
@@ -15,6 +18,7 @@ export const unstable_settings = {
 export default function TabLayout() {
   const { width } = useWindowDimensions();
   const { cores } = useTema();
+  const { papelReal } = usePapelEfetivo();
   const mostrarHeader = useClientOnlyValue(false, true);
   const larguraWeb = Platform.OS === 'web' && width >= 768;
 
@@ -23,6 +27,20 @@ export default function TabLayout() {
   if (larguraWeb) {
     return <Slot />;
   }
+
+  // A barra de navegação inferior é só do app nativo. Na web estreita (sem
+  // espaço pra barra lateral nem pra barra inferior) a navegação fica toda no
+  // header padrão (mesmo de /global, /admin etc.), com o menu ao lado do tema.
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ flex: 1, backgroundColor: cores.fundo }}>
+        <HeaderPadrao />
+        <Slot />
+      </View>
+    );
+  }
+
+  const temMenuExtra = papelReal === 'admin' || papelReal === 'admin_geral';
 
   return (
     <Tabs
@@ -35,7 +53,8 @@ export default function TabLayout() {
         headerShown: mostrarHeader,
         headerTitle: 'DermIA',
         headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: 12 }}>
+            {temMenuExtra && <BotaoMenuNav alinhar="right" />}
             <BotaoTema size={20} />
             <LogoDermia size={22} />
           </View>

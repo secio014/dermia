@@ -15,3 +15,9 @@ export const ITENS_NAV: ItemNav[] = [
   { nome: 'agenda', titulo: 'Agenda', rota: '/agenda', icone: 'calendar-outline' },
   { nome: 'ajustes', titulo: 'Ajustes', rota: '/ajustes', icone: 'settings-outline' },
 ];
+
+// Destinos fixos de navegação (chegou por menu, não por "entrar em algo") —
+// nestes o header mostra a marca normal. Em qualquer outra rota (subpáginas
+// como paciente/novo, consulta/[id], paciente/[id]/lesao/...) o header mostra
+// "‹ Voltar" no lugar.
+export const ROTAS_PRINCIPAIS = ['/', '/painel', '/agenda', '/ajustes', '/global', '/portal'];

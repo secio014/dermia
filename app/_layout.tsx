@@ -22,11 +22,10 @@ import type { Session } from '@supabase/supabase-js';
 import 'react-native-reanimated';
 import '../global.css';
 
+import HeaderPadrao from '@/components/nav/HeaderPadrao';
 import WebShell from '@/components/nav/WebShell';
 import Aviso from '@/components/ui/Aviso';
 import BarraVisao from '@/components/ui/BarraVisao';
-import BotaoTema from '@/components/ui/BotaoTema';
-import LogoDermia from '@/components/ui/LogoDermia';
 import SemAcesso from '@/components/ui/SemAcesso';
 import { paletas, palette } from '@/constants/Colors';
 import { usePapelEfetivo, usePerfilAtual } from '@/.lib/acesso';
@@ -218,20 +217,16 @@ export default function RootLayout() {
       screenOptions={{
         contentStyle: { backgroundColor: paletas[esquema].fundo },
         headerShown: !usarShell,
-        headerTitle: 'DermIA',
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 4 }}>
-            <BotaoTema size={20} />
-            <LogoDermia size={22} />
-          </View>
-        ),
+        // Mesmo header em toda tela sem barra lateral/inferior (web estreita e
+        // app nativo): marca à esquerda, menu + tema à direita — ver HeaderPadrao.
+        header: () => <HeaderPadrao />,
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="portal/index" options={{ headerShown: false }} />
       <Stack.Screen name="portal/login" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="global" options={{ headerShown: !usarShell, headerTitle: 'Visão global' }} />
+      <Stack.Screen name="global" options={{ headerShown: !usarShell }} />
       <Stack.Screen name="admin" options={{ presentation: usarShell ? 'card' : 'modal' }} />
       <Stack.Screen name="consulta/nova" options={{ presentation: usarShell ? 'card' : 'modal' }} />
       <Stack.Screen name="consulta/[id]" />

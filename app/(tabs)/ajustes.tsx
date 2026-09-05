@@ -38,7 +38,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 export default function TelaAjustes() {
   const { preferencia, cores, escolher } = useTema();
   const { perfil } = usePerfilAtual();
-  const { papel: papelEfetivo, papelReal, simulando } = usePapelEfetivo();
+  const { papel: papelEfetivo, simulando } = usePapelEfetivo();
   const versao = Constants.expoConfig?.version ?? '1.0.0';
   const canal = Updates.channel ?? 'desenvolvimento';
 
@@ -147,12 +147,6 @@ export default function TelaAjustes() {
           </View>
         </View>
       </Secao>
-
-      {papelReal === 'admin_geral' && (
-        <Link href="/nav" className="text-primaria font-semibold px-1 py-2">
-          Página de navegação (dev)
-        </Link>
-      )}
     </ScrollView>
   );
 }

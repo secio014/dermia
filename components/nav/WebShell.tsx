@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Animated, Pressable, Text, View } from 'react-native';
 
-import { ITENS_NAV } from '@/components/nav/itens';
+import { ITENS_NAV, ROTAS_PRINCIPAIS } from '@/components/nav/itens';
 import WebFooter from '@/components/nav/WebFooter';
 import LogoDermia from '@/components/ui/LogoDermia';
 import { usePapelEfetivo } from '@/.lib/acesso';
@@ -16,9 +16,6 @@ const CHAVE_MENU = 'dermia:menu-aberto';
 const LARGURA_ABERTA = 240;
 const LARGURA_FECHADA = 64;
 
-// Rotas de topo (destinos fixos do menu) — nelas não aparece o "‹ Voltar".
-const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin', '/global', '/portal'];
-
 /**
  * Layout da web em telas largas (>= 768px): barra lateral à esquerda (recolhível
  * para uma trilha só de ícones, com transição suave) + área de conteúdo. Envolve
@@ -29,7 +26,7 @@ const ROTAS_TOPO = ['/', '/painel', '/agenda', '/ajustes', '/admin', '/global', 
 export default function WebShell({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const emPaginaInterna = !ROTAS_TOPO.includes(pathname);
+  const emPaginaInterna = !ROTAS_PRINCIPAIS.includes(pathname);
 
   function voltar() {
     if (router.canGoBack()) router.back();
