@@ -20,10 +20,11 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 import { json, preflight } from '../_shared/cors.ts';
-import grausQueimadura from '../analisar-lesao/conhecimento/classificacao/graus-queimadura.ts';
-import cicatrizes from '../analisar-lesao/conhecimento/glossario/cicatrizes.ts';
-import pigmentacaoEVascular from '../analisar-lesao/conhecimento/glossario/pigmentacao-e-vascular.ts';
-import procedimentosESequelas from '../analisar-lesao/conhecimento/glossario/procedimentos-e-sequelas.ts';
+import type { Resultado } from '../analisar-lesao/conhecimento/index.ts';
+import { MODELOS_PADRAO, chamarModeloVisao } from '../analisar-lesao/modelo.ts';
+import { analisarFoto } from '../analisar-lesao/pipeline.ts';
+import { checarQualidadeFoto } from '../analisar-lesao/qualidade.ts';
+import { CONHECIMENTO } from './conhecimento.ts';
 
 const MODELO_PADRAO = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const MAX_MENSAGENS = 12;
@@ -57,8 +58,6 @@ Regras:
   devem ser destacados.
 - Datas: hoje é ${new Date().toISOString().slice(0, 10)}.
 `.trim();
-
-const CONHECIMENTO = [grausQueimadura, cicatrizes, pigmentacaoEVascular, procedimentosESequelas].join('\n\n');
 
 const ROTULO_GRAU: Record<string, string> = {
   '1': '1º grau',
@@ -272,7 +271,6 @@ async function fichaPaciente(sb: SupabaseClient, pacienteId: string): Promise<st
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODELO_ESCOPO = '@cf/meta/llama-3.1-8b-instruct-fast';
-const MODELO_VISAO_PADRAO = '@cf/meta/llama-3.2-11b-vision-instruct';
 
 const RECUSA_TEXTO =
   'Sou o assistente da DermIA e só posso ajudar com queimaduras: avaliação e grau, cicatrizes ' +
@@ -316,30 +314,6 @@ NA DÚVIDA, responda false. Responda APENAS com JSON:
 {"descricao": "<uma frase>", "lesao_visivel": true|false, "compativel_queimadura": true|false}
 `.trim();
 
-// Etapa 2 — ANÁLISE, só quando a triagem passou. Saída em campos (não texto
-// livre): o servidor monta a resposta formatada, e o modelo não tem onde
-// "contar" o ambiente da foto.
-const PAPEL_VISAO = `
-# PAPEL
-Você é o Assistente DermIA e analisa UMA foto de queimadura ou cicatriz de queimadura,
-enviada por um fisioterapeuta. Fale SOMENTE da lesão/pele: nunca descreva a pessoa,
-roupas, móveis ou o ambiente.
-
-NÃO invente medidas (cm só se houver régua visível). Não afirme lado (palma/dorso,
-direito/esquerdo) se não for evidente. Seja conservador: se não der para afirmar o grau,
-use "indeterminado".
-
-Responda APENAS com JSON, em português do Brasil:
-{"fase": "aguda" | "cicatricial",
- "grau": "1º grau" | "2º grau superficial" | "2º grau profundo" | "3º grau" | "misto" | "indeterminado",
- "justificativa": "<1 frase: o que na imagem sustenta o grau>",
- "achados": [<zero ou mais de: "queloide", "cicatriz hipertrófica", "hipercromia", "hipocromia",
-              "hiperemia", "enxerto em malha", "área doadora", "deformidade/retração", "ferida aberta",
-              "bolhas", "crosta/necrose">],
- "alarmes": [<sinais de alarme visíveis, ex.: "secreção sugestiva de infecção"; [] se nenhum>],
- "qualidade": "<vazio, ou 1 frase se a foto atrapalhar a avaliação>"}
-`.trim();
-
 /**
  * Lê a triagem: JSON se vier; senão procura "lesão visível: sim/não" e
  * "compatível com queimadura: sim/não" no texto (o modelo às vezes responde
@@ -367,34 +341,44 @@ function lerTriagem(texto: string): { lesao: boolean; compativel: boolean; descr
   };
 }
 
-const ROTULO_GRAU_VISAO: Record<string, string> = {
-  '1': '1º grau',
-  '2_superficial': '2º grau superficial',
-  '2_profundo': '2º grau profundo',
-  '3': '3º grau',
+const ROTULO_ACHADO: Record<string, string> = {
+  queloide: 'queloide',
+  hipertrofica: 'cicatriz hipertrófica',
+  hipercromica: 'hipercromia',
+  hipocromica: 'hipocromia',
+  hiperemia: 'hiperemia',
+  enxerto_malha: 'enxerto em malha',
+  area_doadora: 'área doadora',
+  deformidade: 'deformidade/retração',
+  ferida_aberta: 'ferida aberta',
+  bolha: 'bolha',
+  descamacao: 'descamação',
 };
 
-function formatarAnalise(o: Record<string, unknown>): string {
-  if (typeof o.grau === 'string') o.grau = ROTULO_GRAU_VISAO[o.grau.trim()] ?? o.grau;
-  const lista = (v: unknown) =>
-    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()) : [];
-  const linhas: string[] = [];
-  if (typeof o.fase === 'string') linhas.push(`- **Fase:** ${o.fase}`);
-  if (typeof o.grau === 'string') {
+// Mesmo Resultado que o analisar-lesao grava em analises_ia.
+function formatarAnalise(r: Resultado): string {
+  const achados = (r.achados ?? []).map((a) => ROTULO_ACHADO[a] ?? a);
+  const linhas = [
+    `- **Fase:** ${r.fase}`,
+    `- **Grau sugerido:** ${ROTULO_GRAU[r.grau_sugerido] ?? r.grau_sugerido} (confiança ${Math.round(r.confianca * 100)}%)`,
+    `- **Achados:** ${achados.length ? achados.join(', ') : 'nenhum achado específico'}`,
+    `- **O que a IA viu e por quê:** ${r.observacao}`,
+  ];
+  const v = r.verificacao;
+  if (v) {
     linhas.push(
-      `- **Grau sugerido:** ${o.grau}` +
-        (typeof o.justificativa === 'string' && o.justificativa.trim() ? ` — ${o.justificativa.trim()}` : '')
+      `- **Verificação:** ${v.leituras} leitura(s) independentes + conferência; ` +
+        `${Math.round(v.concordancia * 100)}% chegaram ao mesmo grau`
     );
   }
-  const achados = lista(o.achados);
-  linhas.push(`- **Achados:** ${achados.length ? achados.join(', ') : 'nenhum achado específico'}`);
-  const alarmes = lista(o.alarmes);
-  linhas.push(`- **Sinais de alarme:** ${alarmes.length ? alarmes.join('; ') : 'nenhum visível'}`);
-  if (typeof o.qualidade === 'string' && o.qualidade.trim()) linhas.push(`- **Qualidade da foto:** ${o.qualidade.trim()}`);
-  return `${linhas.join('\n')}\n\n_Sugestão da IA — confirme antes de registrar o grau._`;
+  const aviso =
+    r.confianca < 0.5
+      ? '\n\n_Confiança baixa: confira com atenção ou envie outra foto (outro ângulo, luz natural, mais perto)._'
+      : '';
+  return `${linhas.join('\n')}${aviso}\n\n_Sugestão da IA — confirme antes de registrar o grau._`;
 }
 
-type Msg = { role: 'user' | 'assistant'; content: string };
+type Msg ={ role: 'user' | 'assistant'; content: string };
 
 async function rodarModelo(
   accountId: string,
@@ -504,57 +488,56 @@ Deno.serve(async (req) => {
   try {
     // ── Foto ────────────────────────────────────────────────────────────────
     if (imagem) {
-      const modeloVisao = Deno.env.get('CF_AI_MODELO') ?? MODELO_VISAO_PADRAO;
-      const ficha = paciente_id ? await fichaPaciente(sb, paciente_id) : null;
-      const pergunta = mensagens[mensagens.length - 1]?.content ?? 'Analise esta foto.';
-      const conteudoImagem = { type: 'image_url', image_url: { url: `data:${imagem.mime};base64,${imagem.base64}` } };
+      const modelos = (Deno.env.get('CF_AI_MODELO') ?? '')
+        .split(',')
+        .map((m) => m.trim())
+        .filter(Boolean);
+      if (!modelos.length) modelos.push(...MODELOS_PADRAO);
+      const cred = { accountId, token };
+      const bytes = Uint8Array.from(atob(imagem.base64), (c) => c.charCodeAt(0));
+      const comoTexto = (v: unknown) => (typeof v === 'string' ? v : JSON.stringify(v));
+
+      // Etapa 0: qualidade da foto em código (escura, borrada, pequena...).
+      const qualidade = checarQualidadeFoto(bytes);
+      if (!qualidade.ok) {
+        return json({ resposta: `Preciso de outra foto: ${qualidade.motivo}`, pacientes: [], nova_foto: true }, 200);
+      }
 
       // Etapa 1: triagem. Precisa das DUAS respostas = sim; qualquer outra
-      // coisa (não, ilegível, campo faltando) recusa.
-      const brutoTriagem = await rodarModelo(
-        accountId,
-        token,
-        modeloVisao,
-        [
-          { role: 'system', content: PROMPT_TRIAGEM },
-          { role: 'user', content: [{ type: 'text', text: 'Faça a triagem desta foto.' }, conteudoImagem] },
-        ],
-        150,
-        0
-      );
-      const triagem = lerTriagem(brutoTriagem);
-      if (!triagem.lesao || !triagem.compativel) {
+      // coisa (não, ilegível, campo faltando) recusa. O prompt vai junto da
+      // imagem na mensagem do usuário: com imagem, o modelo ignora o system.
+      const triagemResp = await chamarModeloVisao(cred, modelos, PROMPT_TRIAGEM, bytes, imagem.mime);
+      const triagem = lerTriagem(comoTexto(triagemResp.bruto));
+      // Recusa só sem lesão visível. Lesão que o modelo não reconhece como
+      // queimadura (crosta, descamação em cicatrização) segue para a análise
+      // com aviso — o chat é de uma clínica de queimados, e recusar uma
+      // queimadura real é pior que analisar com ressalva.
+      if (!triagem.lesao) {
         return json(
-          { resposta: RECUSA_FOTO, pacientes: [], fora_do_escopo: true, triagem: triagem.descricao, modelo: modeloVisao },
+          { resposta: RECUSA_FOTO, pacientes: [], fora_do_escopo: true, triagem: triagem.descricao, modelo: triagemResp.modelo },
           200
         );
       }
 
-      // Etapa 2: análise estruturada. O modelo às vezes devolve markdown em vez
-      // de JSON — tenta de novo uma vez, reforçando o formato.
-      const sistemaAnalise = [PAPEL_VISAO, CONHECIMENTO, ficha ? `# CONTEXTO DO PACIENTE\n${ficha}` : '']
-        .filter(Boolean)
-        .join('\n\n');
-      let obj: Record<string, unknown> | null = null;
-      for (const reforco of ['', '\n\nIMPORTANTE: responda SOMENTE o objeto JSON pedido, começando com { e terminando com }.']) {
-        const saida = await rodarModelo(
-          accountId,
-          token,
-          modeloVisao,
-          [
-            { role: 'system', content: sistemaAnalise + reforco },
-            { role: 'user', content: [{ type: 'text', text: pergunta }, conteudoImagem] },
-          ],
-          500,
-          0.1
+      // Etapa 2: MESMO pipeline do analisar-lesao — 3 leituras do checklist
+      // visual + conferência, consenso entre elas e grau pelas regras em
+      // código. Pedir o grau direto ao modelo puxava quase tudo para 2º grau.
+      const analise = await analisarFoto(cred, modelos, bytes, imagem.mime, {}, {
+        nitidezLimitrofe: qualidade.nitidez_limitrofe,
+      });
+      if (analise.tipo === 'nova_foto') {
+        return json(
+          { resposta: `Preciso de outra foto: ${analise.motivo}`, pacientes: [], nova_foto: true, modelo: analise.modelo },
+          200
         );
-        obj = extrairJson(saida);
-        if (obj && typeof obj.grau === 'string') break;
       }
-      if (!obj || typeof obj.grau !== 'string') {
-        return json({ error: 'A IA não conseguiu estruturar a análise. Tente outra foto.' }, 502);
-      }
-      return json({ resposta: formatarAnalise(obj), pacientes: [], modelo: modeloVisao }, 200);
+      const ressalva = triagem.compativel
+        ? ''
+        : '_Atenção: a IA não reconheceu com certeza esta lesão como queimadura — confirme a causa._\n\n';
+      return json(
+        { resposta: ressalva + formatarAnalise(analise.resultado), pacientes: [], modelo: analise.modelo },
+        200
+      );
     }
 
     // ── Texto ───────────────────────────────────────────────────────────────

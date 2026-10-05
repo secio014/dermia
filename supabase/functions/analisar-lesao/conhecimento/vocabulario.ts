@@ -19,3 +19,7 @@ export const ACHADOS = [
   'bolha',
   'descamacao',
 ] as const;
+
+export type Grau = (typeof GRAUS)[number];
+export type Fase = (typeof FASES)[number];
+export type Achado = (typeof ACHADOS)[number];

@@ -18,6 +18,7 @@ import Particulas from '@/components/efeitos/Particulas';
 import Surgir from '@/components/efeitos/Surgir';
 import Vidro from '@/components/efeitos/Vidro';
 import LogoDermia from '@/components/ui/LogoDermia';
+import TelaCarregamento from '@/components/ui/TelaCarregamento';
 import BotaoTema from '@/components/ui/BotaoTema';
 import { useLargo } from '@/.lib/responsivo';
 import { rotaInicialDoUsuario } from '@/.lib/acesso';
@@ -53,20 +54,37 @@ export default function Login() {
   const [redirecionando, setRedirecionando] = useState<'/global' | '/painel' | '/portal' | null>(
     null
   );
+  // Começa verificando: o formulário só aparece depois de confirmar que NÃO
+  // há sessão — quem já está logado vê a tela de carregamento e segue direto.
+  const [verificando, setVerificando] = useState(true);
+  const [entrou, setEntrou] = useState(false);
 
   // Já logado: manda direto para a área da conta (conforme o papel) em vez de
   // mostrar o formulário de novo. Cobre tanto o retorno de um usuário real
   // quanto o login automático de teste do dev — sem isso, vir do site para
   // "/login" abre uma segunda tela de login sem necessidade.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        rotaInicialDoUsuario().then((destino) => setRedirecionando(destino ?? '/painel'));
-      }
-    });
+    let vivo = true;
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        if (!data.session) return;
+        const destino = await rotaInicialDoUsuario();
+        // Sem destino (falha de rede, conta sem vínculo): vai ao painel e o
+        // layout decide — mostra "sem acesso" em vez de deslogar por engano.
+        if (vivo) setRedirecionando(destino ?? '/painel');
+      })
+      .catch(() => {})
+      .finally(() => vivo && setVerificando(false));
+    return () => {
+      vivo = false;
+    };
   }, []);
 
   if (redirecionando) return <Redirect href={redirecionando} />;
+  if (verificando) return <TelaCarregamento mensagem="Verificando sua sessão…" />;
+  // Login feito: segura a tela de carregamento até a navegação trocar de rota.
+  if (entrou) return <TelaCarregamento mensagem="Entrando…" />;
 
   function validar() {
     const e: typeof erros = {};
@@ -104,6 +122,7 @@ export default function Login() {
       setErros({ geral: 'Esta conta ainda não tem acesso. Fale com a sua clínica.' });
       return;
     }
+    setEntrou(true);
     router.replace(destino);
   }
 

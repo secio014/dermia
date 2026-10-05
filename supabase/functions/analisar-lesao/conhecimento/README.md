@@ -1,51 +1,102 @@
 # Conhecimento da IA (analisar-lesao)
 
-O modelo de visão (Llama 3.2 11B Vision no Cloudflare Workers AI) não é
-re-treinado: ele "aprende" lendo estas **skills** no prompt de sistema a cada
-análise. Cada skill é um arquivo `.ts` que exporta um texto. Ficam em arquivos
-separados para que dê pra revisar ou editar um assunto sem mexer nos outros.
+O modelo de visão do Cloudflare Workers AI não é re-treinado. A análise roda
+em **2 etapas** para que o modelo não "chute" o grau:
 
-Fonte clínica: `dermia-docs-doenca.docx` (glossário + 26 fotos rotuladas pela
-equipe + 5 fotos de queimadura aguda, `image27`–`image31`, com rótulos propostos
-que a equipe ainda precisa confirmar).
+1. **Observação** (`observacao.ts`): o modelo só preenche um checklist do que
+   VÊ na foto (bolha íntegra/rota, cor do leito, pontos de sangue, relevo,
+   descamação, enxerto...) e escreve uma descrição curta. Ele não escolhe o
+   grau. O prompt leva também o contexto da lesão: região, causa e dias desde
+   a queimadura.
+2. **Decisão** (`decisao.ts`): regras clínicas fixas em código transformam o
+   checklist e o contexto em grau, fase, achados, confiança e observação. A
+   observação explica o PORQUÊ do grau.
+3. **Base de consulta** (`base-referencias.ts`): o checklist da foto nova é
+   comparado com o dos casos rotulados pela equipe. Os 3 mais parecidos
+   confirmam a decisão (a confiança sobe), contestam (a confiança cai e
+   aparece um aviso) ou resolvem um "indeterminado". O profissional vê esses
+   casos na tela de validação.
 
-## Pastas
+## Validação antes de responder (`../pipeline.ts`, `../qualidade.ts`)
 
-| Pasta / arquivo | O que ensina |
+Uma resposta errada com cara de certa é pior que uma resposta demorada. Por
+isso, antes de devolver o grau, a análise passa por estas etapas:
+
+- **Qualidade em código** (`qualidade.ts`): foto escura, estourada, uniforme,
+  com resolução abaixo de 300px ou borrada é recusada antes de chamar o
+  modelo. A nitidez é medida pela variância do laplaciano. Os limiares foram
+  calibrados nas fotos de `ia-referencias/`: a foto boa menos nítida dá ~52,
+  então abaixo de 20 recusa e entre 20 e 40 conta como limítrofe.
+- **3 leituras independentes** do checklist, em temperaturas 0.1, 0.4 e 0.7,
+  mais 1 **conferência** de sim/não sobre bolha, ferida aberta e área
+  seca/rígida, e sobre se a foto permite avaliar. As 4 chamadas rodam em
+  paralelo.
+- **Consenso**: cada sinal só entra se tiver maioria. Uma leitura sozinha
+  "vendo bolha" não leva mais ao 2º grau. Em caso de empate o sinal entra,
+  mas a confiança cai.
+- **Nova foto em vez de chute**: o pipeline pede outra foto quando a maioria
+  das leituras recusa a foto ou a acha borrada, quando a conferência reprova
+  uma foto já limítrofe, ou quando as leituras saltam de grau sem maioria
+  (ex.: 1º / 3º / 2º).
+- **Concordância**: cada leitura também é decidida sozinha. O grau de cada
+  uma e as divergências ficam em `resultado.verificacao` e reduzem a
+  confiança.
+
+Antes, o modelo recebia 4,5 mil tokens de regras e escrevia o grau como
+primeira palavra da resposta. Um modelo de 11B não segue esse raciocínio e
+caía quase sempre no 2º grau.
+
+## Arquivos
+
+| Arquivo | O que faz |
 |---|---|
-| `base/papel.ts` | Quem a IA é, limites, ser conservadora |
-| `base/qualidade-imagem.ts` | Quando recusar a foto; ignorar a tela do celular, a régua e o lençol |
-| `base/formato-resposta.ts` | O JSON de saída (gerado a partir de `vocabulario.ts`) |
-| `classificacao/graus-queimadura.ts` | Sinais visuais de 1º, 2º superficial, 2º profundo, 3º, misto e indeterminado |
-| `classificacao/regras-decisao.ts` | Passo a passo, como calibrar a confiança e o que escrever na observação |
-| `glossario/cicatrizes.ts` | Queloide x hipertrófica |
-| `glossario/pigmentacao-e-vascular.ts` | Hipercrômica, hipocrômica e hiperemia |
-| `glossario/procedimentos-e-sequelas.ts` | Enxerto em malha, área doadora, deformidade e ferida aberta |
-| `glossario/lesoes-agudas.ts` | Bolha, descamação, eritema, queimadura de sol e como ler a profundidade do leito aberto |
-| `exemplos/casos-referencia.ts` | Os 31 casos do documento (26 da equipe + 5 agudos), cada um com a descrição da foto e o rótulo correto |
-| `vocabulario.ts` | Listas fechadas (graus, fases, achados), usadas pelo prompt e pelo Zod |
-| `index.ts` | Ordem de leitura e montagem do prompt (`montarPromptSistema`) |
+| `observacao.ts` | Prompt do checklist + leitura tolerante da resposta (valor fora da lista vira neutro) |
+| `decisao.ts` | Regras de grau/fase/achados/confiança + uso do contexto clínico |
+| `base-referencias.ts` | Similaridade entre checklists e consenso dos vizinhos |
+| `base-referencias.gerada.ts` | Checklists das fotos de referência (GERADO, não editar) |
+| `exemplos/casos-referencia.ts` | Gabarito da equipe: rótulo correto de cada foto do .docx |
+| `vocabulario.ts` | Listas fechadas (graus, fases, achados) |
+| `../modelo.ts` | Chamada ao Workers AI: tenta Llama 4 Scout e cai no Llama 3.2 11B Vision |
 
-## Como ensinar algo novo
+## Regras principais (decisao.ts)
 
-- **Novo termo clínico**: crie um arquivo em `glossario/`. Se ele for virar um
-  achado, adicione o id em `vocabulario.ts` e o rótulo em
-  `ROTULOS_ACHADOS` (`components/ValidacaoIA.tsx`). Depois registre o arquivo
-  em `SKILLS` no `index.ts`.
-- **Novo caso de referência**: acrescente um item em `CASOS`
-  (`exemplos/casos-referencia.ts`) descrevendo o que aparece na foto e o
-  rótulo dado pela equipe.
-- **Uma correção recorrente** (por exemplo, a IA confunde X com Y): escreva a
-  regra em `classificacao/regras-decisao.ts`.
+- Enxerto em malha, deformidade, carbonizado, leito branco seco de couro ou
+  granulação extensa → **3º grau**.
+- Leito vermelho-escuro ou mosqueado, leito pálido sem sangramento, fibrina
+  ou crosta escura sobre ferida → **2º profundo**.
+- Bolha (íntegra ou rota), leito rosa úmido ou pontos de sangue →
+  **2º superficial**.
+- Vermelhidão com pele íntegra, com ou sem descamação em folhas → **1º grau**.
+- Sinais de níveis não vizinhos na mesma foto → **misto**. O halo vermelho em
+  volta não conta.
+- Cicatriz sem pista do grau original → **indeterminado**.
+- Contexto clínico:
+  - ferida ainda aberta depois de 21 dias passa de 2º superficial para
+    2º profundo;
+  - queimadura elétrica ou química recebe um aviso e confiança menor.
+
+## Como melhorar
+
+1. Coloque as fotos rotuladas em `ia-referencias/<categoria>/` (gitignored,
+   LGPD) e o rótulo em `CASOS` (`exemplos/casos-referencia.ts`).
+2. Gere a base e meça o acerto:
+   ```
+   CF_ACCOUNT_ID=... CF_AI_TOKEN=... npx tsx scripts/avaliar-ia.ts --gerar-base
+   CF_ACCOUNT_ID=... CF_AI_TOKEN=... npx tsx scripts/avaliar-ia.ts
+   ```
+   A avaliação é leave-one-out: cada foto é comparada com a base sem ela
+   mesma. O script mostra caso a caso, a % de acerto e a distribuição dos
+   graus.
+3. Quando errar, veja no cache (`ia-referencias/.observacoes.json`) se o
+   modelo **viu errado** (ajuste a definição do campo em `observacao.ts`) ou
+   se ele viu certo e a **regra decidiu errado** (ajuste `decisao.ts`).
+4. Ao adicionar um achado novo: inclua o id em `vocabulario.ts` e o rótulo em
+   `ROTULOS_ACHADOS` (`components/ValidacaoIA.tsx`).
 
 Depois de editar: `supabase functions deploy analisar-lesao`.
 
-Hoje o prompt tem cerca de 4,5 mil tokens. Mantenha os textos curtos, porque
-um modelo de 11B segue melhor instruções objetivas do que textos longos.
+## Privacidade
 
-## Fotos de referência
-
-As fotos extraídas do .docx ficam em `ia-referencias/<categoria>/`, na raiz do
-repositório. Essa pasta está no **.gitignore** porque são dados de pacientes
-(LGPD) e não podem ser versionados. Servem para testar o prompt manualmente
-e, no futuro, para avaliar ou fazer fine-tuning de um modelo.
+As fotos nunca saem para busca na internet (Google etc.): são dados de saúde
+(LGPD). A base de consulta guarda só o checklist em texto e o rótulo de cada
+foto de referência. As fotos ficam em `ia-referencias/`, fora do git.

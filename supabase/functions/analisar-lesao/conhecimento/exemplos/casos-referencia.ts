@@ -1,9 +1,10 @@
-// Skill: casos rotulados do material clínico (dermia-docs-doenca.docx).
+// Gabarito: casos rotulados do material clínico (docs/dermia-docs-doenca.docx).
 //
-// Cada caso = o que se vê na foto + o rótulo dado pela equipe clínica. Servem
-// de exemplos (few-shot em texto) para a IA calibrar o que cada termo parece.
-// `imagem` é o arquivo dentro do .docx (word/media/) — ver
-// conhecimento/README.md para como reorganizar/expandir este conjunto.
+// Cada caso = o que se vê na foto + o rótulo dado pela equipe clínica. NÃO vai
+// no prompt (texto de exemplo não ensina o modelo a enxergar); é o gabarito
+// que scripts/avaliar-ia.ts usa para medir a taxa de acerto com as fotos de
+// ia-referencias/. `imagem` é o arquivo dentro do .docx (word/media/).
+// Sem `grau` = a equipe não deu grau (cicatriz madura) → esperado "indeterminado".
 
 export type CasoReferencia = {
   imagem: string;
@@ -47,14 +48,3 @@ export const CASOS: CasoReferencia[] = [
   { imagem: 'image31.jpg', rotulo: '1º grau — queimadura solar descamando', descricao: 'Ombro avermelhado com pele soltando em folhas finas brancas de bordas enroladas; embaixo pele rosada seca e íntegra, sem bolhas.', grau: '1', achados: ['hiperemia', 'descamacao'] },
   { imagem: 'image1.jpg', rotulo: '3º grau profundo — ferida aberta', descricao: 'Tórax lateral/axila: várias ilhas vermelho-vivo de granulação sobre fundo esbranquiçado, crostas escuras.', grau: '3', achados: ['ferida_aberta', 'hiperemia'] },
 ];
-
-function formatar(caso: CasoReferencia): string {
-  const grau = caso.grau ? `grau ${caso.grau}` : 'grau indeterminado (cicatriz)';
-  return `- ${caso.descricao} → ${grau}; achados: ${caso.achados.join(', ')}.`;
-}
-
-export default `
-# EXEMPLOS ROTULADOS PELA EQUIPE CLÍNICA
-(descrição da foto → rótulo correto)
-${CASOS.map(formatar).join('\n')}
-`.trim();

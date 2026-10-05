@@ -10,6 +10,9 @@ export type ResultadoIA = {
   fase?: 'aguda' | 'cicatricial';
   achados?: string[];
   observacao?: string;
+  // Casos rotulados da base mais parecidos (só rótulo — a foto de referência
+  // não sai do servidor).
+  casos_parecidos?: { imagem: string; rotulo: string; similaridade: number }[];
 };
 
 // Rótulos dos achados que a Edge Function analisar-lesao pode devolver
@@ -129,6 +132,14 @@ export default function ValidacaoIA({
       )}
       {!!resultado?.observacao && (
         <Text className="text-secundario text-xs mb-2">{resultado.observacao}</Text>
+      )}
+      {!!resultado?.casos_parecidos?.length && (
+        <Text className="text-secundario text-xs mb-2">
+          Casos parecidos da base:{' '}
+          {resultado.casos_parecidos
+            .map((c) => `${c.rotulo} (${Math.round(c.similaridade * 100)}%)`)
+            .join(' · ')}
+        </Text>
       )}
 
       {!editando ? (

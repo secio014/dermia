@@ -22,8 +22,13 @@ const LARGURA_FECHADA = 64;
  * toda a área profissional — as páginas internas ganham um "‹ Voltar" no topo do
  * conteúdo em vez do header nativo. No celular / web estreita, o (tabs)/_layout
  * usa a barra inferior normal.
+ *
+ * `ativo={false}` (landing, login, portal) esconde a barra, o "Voltar" e o
+ * rodapé mas mantém a MESMA árvore em volta do conteúdo: assim a pilha de
+ * navegação não troca de lugar ao entrar/sair da área profissional. Trocar
+ * de lugar remonta o <Stack>, que volta para a primeira rota (a landing).
  */
-export default function WebShell({ children }: { children?: ReactNode }) {
+export default function WebShell({ children, ativo = true }: { children?: ReactNode; ativo?: boolean }) {
   const pathname = usePathname();
   const reduzido = useMovimentoReduzido();
 
@@ -75,7 +80,7 @@ export default function WebShell({ children }: { children?: ReactNode }) {
 
   return (
     <View className="flex-1 flex-row bg-fundo">
-      <Animated.View style={{ width: larguraAnim, overflow: 'hidden' }}>
+      <Animated.View style={{ width: larguraAnim, overflow: 'hidden', display: ativo ? 'flex' : 'none' }}>
         <View className="flex-1 border-r border-borda bg-superficie py-4 px-2 justify-between">
           <View>
           <View
@@ -243,8 +248,8 @@ export default function WebShell({ children }: { children?: ReactNode }) {
       <View className="flex-1 bg-fundo">
         {/* Conteúdo centralizado, com um teto largo para aproveitar monitores
             grandes. As telas internas ainda limitam a própria largura. */}
-        <View className="flex-1 w-full px-6 xl:px-10">
-          {emPaginaInterna && (
+        <View className={ativo ? 'flex-1 w-full px-6 xl:px-10' : 'flex-1 w-full'}>
+          {ativo && emPaginaInterna && (
             <Pressable
               onPress={voltar}
               accessibilityLabel="Voltar"
@@ -256,13 +261,19 @@ export default function WebShell({ children }: { children?: ReactNode }) {
           <Animated.View
             style={{
               flex: 1,
-              opacity: entrada,
-              transform: [{ translateY: entrada.interpolate({ inputRange: [0, 1], outputRange: [reduzido ? 0 : 10, 0] }) }],
+              opacity: ativo ? entrada : 1,
+              transform: [
+                {
+                  translateY: ativo
+                    ? entrada.interpolate({ inputRange: [0, 1], outputRange: [reduzido ? 0 : 10, 0] })
+                    : 0,
+                },
+              ],
             }}>
             {children ?? <Slot />}
           </Animated.View>
         </View>
-        <WebFooter />
+        {ativo && <WebFooter />}
       </View>
     </View>
   );

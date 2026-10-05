@@ -17,7 +17,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import 'react-native-reanimated';
 import '../global.css';
@@ -27,7 +27,8 @@ import WebShell from '@/components/nav/WebShell';
 import Aviso from '@/components/ui/Aviso';
 import BarraVisao from '@/components/ui/BarraVisao';
 import SemAcesso from '@/components/ui/SemAcesso';
-import { paletas, palette } from '@/constants/Colors';
+import TelaCarregamento from '@/components/ui/TelaCarregamento';
+import { paletas } from '@/constants/Colors';
 import { usePapelEfetivo, usePerfilAtual } from '@/.lib/acesso';
 import { instalarFonteInter } from '@/.lib/fonte';
 import { useAplicarTema, useTema } from '@/.lib/tema';
@@ -61,9 +62,11 @@ instalarFonteInter();
  * Enquanto essa checagem async não termina, o layout mostra um spinner em vez
  * de redirecionar; se de fato não há sessão, aí sim vai para o login.
  */
-function useSemSessaoConfirmada(sessao: Session | null): boolean {
+function useSemSessaoConfirmada(sessao: Session | null, rota: string): boolean {
   const [confirmada, setConfirmada] = useState(false);
 
+  // Rechecado a cada troca de rota: um "sem sessão" confirmado na tela de
+  // login não pode valer para a navegação que acontece logo após entrar.
   useEffect(() => {
     if (sessao) {
       setConfirmada(false);
@@ -77,7 +80,7 @@ function useSemSessaoConfirmada(sessao: Session | null): boolean {
     return () => {
       vivo = false;
     };
-  }, [sessao]);
+  }, [sessao, rota]);
 
   return confirmada;
 }
@@ -103,10 +106,10 @@ export default function RootLayout() {
   useAplicarTema();
   const { esquema } = useTema();
   const { sessao, carregando } = useSessao();
-  const semSessaoConfirmada = useSemSessaoConfirmada(sessao);
   const { perfil, carregando: carregandoPerfil } = usePerfilAtual();
   const { papelReal, simulando } = usePapelEfetivo();
   const segmentos = useSegments();
+  const semSessaoConfirmada = useSemSessaoConfirmada(sessao, segmentos.join('/'));
   const router = useRouter();
   const { width } = useWindowDimensions();
   const [fontesProntas] = useFonts({
@@ -150,9 +153,7 @@ export default function RootLayout() {
 
   if (carregando || !fontesProntas) {
     return (
-      <View className="flex-1 bg-fundo items-center justify-center">
-        <ActivityIndicator color={palette.primaria} />
-      </View>
+      <TelaCarregamento />
     );
   }
 
@@ -176,39 +177,35 @@ export default function RootLayout() {
     (!rotaPublica ||
       ((raiz === 'portal' || raiz == null || raiz === 'index') && papelReal === 'admin_geral'));
 
+  // Carregamentos dos gates abaixo são desenhados POR CIMA da pilha, nunca no
+  // lugar dela: trocar o <Stack> por outra tela desmonta o navegador, e ao
+  // remontar ele volta para a primeira rota (a landing `/`) — era isso que
+  // mandava o usuário de volta ao site logo depois de entrar.
+  // Pelo mesmo motivo, o "sem acesso" e o redirect para o login também ficam
+  // ao lado da pilha (sem return antecipado).
+  let carregandoGate: string | null = null;
+  let semAcesso: string | null = null;
+  let irParaLogin = false;
+
   if (!LOGIN_DESATIVADO && !sessao && !rotaPublica) {
     // Ainda pode ser a janela pós-login em que o evento SIGNED_IN não chegou —
     // segura um instante antes de decidir que é para ir ao login.
-    if (!semSessaoConfirmada) {
-      return (
-        <View className="flex-1 bg-fundo items-center justify-center">
-          <ActivityIndicator color={palette.primaria} />
-        </View>
-      );
+    if (!semSessaoConfirmada) carregandoGate = 'Verificando sua sessão…';
+    else {
+      carregandoGate = 'Verificando sua sessão…';
+      irParaLogin = true;
     }
-    return <Redirect href="/login" />;
   }
 
   // Fora do portal e da landing, a área profissional exige um perfil ativo em
   // `profissionais` — sem isso, nem admin nem fisioterapeuta entram.
   if (sessao && !rotaPublica) {
     if (carregandoPerfil) {
-      return (
-        <View className="flex-1 bg-fundo items-center justify-center">
-          <ActivityIndicator color={palette.primaria} />
-        </View>
-      );
-    }
-    if (!perfil || !perfil.ativo) {
-      return (
-        <SemAcesso
-          mensagem={
-            !perfil
-              ? 'Esta conta não faz parte de nenhuma clínica. Use o Portal do Paciente ou fale com o administrador.'
-              : 'Seu acesso foi desativado. Fale com o administrador da clínica.'
-          }
-        />
-      );
+      carregandoGate = 'Carregando seu perfil…';
+    } else if (!perfil || !perfil.ativo) {
+      semAcesso = !perfil
+        ? 'Esta conta não faz parte de nenhuma clínica. Use o Portal do Paciente ou fale com o administrador.'
+        : 'Seu acesso foi desativado. Fale com o administrador da clínica.';
     }
   }
 
@@ -244,8 +241,20 @@ export default function RootLayout() {
     <ThemeProvider value={temaNavegacao(esquema)}>
       <View className="flex-1 bg-fundo">
         <BarraVisao />
-        {usarShell ? <WebShell>{pilha}</WebShell> : pilha}
+        {/* Na web a pilha fica SEMPRE dentro do WebShell (só a barra some
+            fora da área profissional) — ver comentário no WebShell. */}
+        {Platform.OS === 'web' ? <WebShell ativo={usarShell}>{pilha}</WebShell> : pilha}
         <Aviso />
+        {(carregandoGate || semAcesso) && (
+          <View style={StyleSheet.absoluteFill}>
+            {semAcesso ? (
+              <SemAcesso mensagem={semAcesso} />
+            ) : (
+              <TelaCarregamento mensagem={carregandoGate!} />
+            )}
+          </View>
+        )}
+        {irParaLogin && <Redirect href="/login" />}
       </View>
     </ThemeProvider>
   );
