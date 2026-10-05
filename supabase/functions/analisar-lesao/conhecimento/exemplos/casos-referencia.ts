@@ -39,6 +39,12 @@ export const CASOS: CasoReferencia[] = [
   { imagem: 'image8.jpg', rotulo: 'Queloide', descricao: 'Orelha e região retroauricular: cicatriz elevada que deforma a hélice e se estende para a pele atrás da orelha.', achados: ['queloide', 'deformidade'] },
   { imagem: 'image14.jpg', rotulo: 'Área doadora — hiperemia', descricao: 'Coxa com dois retângulos vermelho-vinho, bordas retas, superfície uniforme brilhante (pele retirada para enxerto).', achados: ['area_doadora', 'hiperemia'] },
   { imagem: 'image25.jpg', rotulo: '3º grau hiperêmica', descricao: 'Perna inteira com cicatriz/enxerto vermelho-rosado intenso, aspecto reticulado irregular, bordas esbranquiçadas.', grau: '3', achados: ['hiperemia', 'enxerto_malha'] },
+  // Fase aguda (acrescentados em 2026-10-05, rótulos propostos — validar com a equipe).
+  { imagem: 'image27.jpg', rotulo: '2º grau superficial — bolhas rotas', descricao: 'Dorso da mão vermelho difuso com várias bolhas pequenas redondas estouradas: leito vermelho úmido, algumas com sangue escuro; pele em volta íntegra.', grau: '2_superficial', achados: ['bolha', 'hiperemia', 'ferida_aberta'] },
+  { imagem: 'image28.jpg', rotulo: '2º grau superficial — bolha íntegra', descricao: 'Mão fechada com UMA bolha tensa, lisa, brilhante, com líquido amarelado claro; pele em volta normal, sem vermelhidão.', grau: '2_superficial', achados: ['bolha'] },
+  { imagem: 'image29.jpg', rotulo: '1º grau — queimadura solar', descricao: 'Nuca e ombros vermelhos uniformes, pele íntegra e seca; limite reto onde estava a gola da camisa, pele clara normal abaixo (não é hipocromia).', grau: '1', achados: ['hiperemia'] },
+  { imagem: 'image30.jpg', rotulo: '2º grau superficial — escaldadura', descricao: 'Costas/ombro: grande área de borda irregular, leito rosa-vermelho úmido com pontinhos de sangue, placas branco-rosadas brilhantes de pele solta, borda acastanhada; lesão menor no braço.', grau: '2_superficial', achados: ['bolha', 'ferida_aberta', 'hiperemia'] },
+  { imagem: 'image31.jpg', rotulo: '1º grau — queimadura solar descamando', descricao: 'Ombro avermelhado com pele soltando em folhas finas brancas de bordas enroladas; embaixo pele rosada seca e íntegra, sem bolhas.', grau: '1', achados: ['hiperemia', 'descamacao'] },
   { imagem: 'image1.jpg', rotulo: '3º grau profundo — ferida aberta', descricao: 'Tórax lateral/axila: várias ilhas vermelho-vivo de granulação sobre fundo esbranquiçado, crostas escuras.', grau: '3', achados: ['ferida_aberta', 'hiperemia'] },
 ];
 

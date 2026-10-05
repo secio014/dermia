@@ -15,7 +15,8 @@ HIPOCRÔMICA ("hipocromica")
 HIPEREMIA / HIPEREMIADA ("hiperemia")
   Vermelhidão (e calor local) por aumento do fluxo de sangue.
   Na foto: tom vermelho a rosa-avermelhado intenso, difuso, em cicatriz
-  recente, em área enxertada ou em ÁREA DOADORA de enxerto.
+  recente, em área enxertada ou em ÁREA DOADORA de enxerto. Também use
+  para o eritema da queimadura aguda (queimadura de sol, halo de bolhas).
 
 A mesma foto pode ter várias ao mesmo tempo (ex.: hiperemia + hipercromia;
 hipercromia em uma parte e hipocromia em outra). Liste todas que vir.

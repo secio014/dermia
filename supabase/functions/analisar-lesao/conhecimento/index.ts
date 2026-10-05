@@ -10,6 +10,7 @@ import regrasDecisao from './classificacao/regras-decisao.ts';
 import cicatrizes from './glossario/cicatrizes.ts';
 import pigmentacaoEVascular from './glossario/pigmentacao-e-vascular.ts';
 import procedimentosESequelas from './glossario/procedimentos-e-sequelas.ts';
+import lesoesAgudas from './glossario/lesoes-agudas.ts';
 import casosReferencia from './exemplos/casos-referencia.ts';
 
 export const SKILLS: { id: string; conteudo: string }[] = [
@@ -19,6 +20,7 @@ export const SKILLS: { id: string; conteudo: string }[] = [
   { id: 'glossario/cicatrizes', conteudo: cicatrizes },
   { id: 'glossario/pigmentacao-e-vascular', conteudo: pigmentacaoEVascular },
   { id: 'glossario/procedimentos-e-sequelas', conteudo: procedimentosESequelas },
+  { id: 'glossario/lesoes-agudas', conteudo: lesoesAgudas },
   { id: 'exemplos/casos-referencia', conteudo: casosReferencia },
   { id: 'classificacao/regras-decisao', conteudo: regrasDecisao },
   // Formato por último: é o que o modelo mais "lembra" na hora de responder.

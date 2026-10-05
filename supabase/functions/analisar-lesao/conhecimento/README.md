@@ -6,7 +6,8 @@ análise. Cada skill é um arquivo `.ts` que exporta um texto. Ficam em arquivos
 separados para que dê pra revisar ou editar um assunto sem mexer nos outros.
 
 Fonte clínica: `dermia-docs-doenca.docx` (glossário + 26 fotos rotuladas pela
-equipe).
+equipe + 5 fotos de queimadura aguda, `image27`–`image31`, com rótulos propostos
+que a equipe ainda precisa confirmar).
 
 ## Pastas
 
@@ -20,7 +21,8 @@ equipe).
 | `glossario/cicatrizes.ts` | Queloide x hipertrófica |
 | `glossario/pigmentacao-e-vascular.ts` | Hipercrômica, hipocrômica e hiperemia |
 | `glossario/procedimentos-e-sequelas.ts` | Enxerto em malha, área doadora, deformidade e ferida aberta |
-| `exemplos/casos-referencia.ts` | Os 26 casos do documento, cada um com a descrição da foto e o rótulo correto |
+| `glossario/lesoes-agudas.ts` | Bolha, descamação, eritema, queimadura de sol e como ler a profundidade do leito aberto |
+| `exemplos/casos-referencia.ts` | Os 31 casos do documento (26 da equipe + 5 agudos), cada um com a descrição da foto e o rótulo correto |
 | `vocabulario.ts` | Listas fechadas (graus, fases, achados), usadas pelo prompt e pelo Zod |
 | `index.ts` | Ordem de leitura e montagem do prompt (`montarPromptSistema`) |
 
@@ -38,7 +40,7 @@ equipe).
 
 Depois de editar: `supabase functions deploy analisar-lesao`.
 
-Hoje o prompt tem cerca de 3,5 mil tokens. Mantenha os textos curtos, porque
+Hoje o prompt tem cerca de 4,5 mil tokens. Mantenha os textos curtos, porque
 um modelo de 11B segue melhor instruções objetivas do que textos longos.
 
 ## Fotos de referência

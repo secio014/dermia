@@ -16,4 +16,6 @@ export const ACHADOS = [
   'area_doadora',
   'deformidade',
   'ferida_aberta',
+  'bolha',
+  'descamacao',
 ] as const;

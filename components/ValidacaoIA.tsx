@@ -24,6 +24,8 @@ const ROTULOS_ACHADOS: Record<string, string> = {
   area_doadora: 'Área doadora',
   deformidade: 'Deformidade',
   ferida_aberta: 'Ferida aberta',
+  bolha: 'Bolha',
+  descamacao: 'Descamação',
 };
 
 const ROTULOS_FASE: Record<string, string> = {
