@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import Protegido from '@/components/Protegido';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { palette } from '@/constants/Colors';
 import { avisar } from '@/.lib/aviso';
 import { ROTULO_TIPO, TIPOS_INSTITUICAO, tipoClinica, type TipoInstituicao } from '@/.lib/instituicoes';
@@ -617,13 +618,13 @@ function PainelGlobal() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-5xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text className="text-texto text-xl font-bold mb-1">Visão global</Text>
-      <Text className="text-secundario mb-4">
-        Todas as clínicas e usuários da plataforma. Use o "Ver como" no menu para pré-visualizar o
-        app na visão de cada papel.
-      </Text>
+      <CabecalhoTela
+        icone="planet"
+        titulo="Visão global"
+        subtitulo={'Todas as clínicas e usuários da plataforma. Use o "Ver como" no menu para pré-visualizar o app na visão de cada papel.'}
+      />
 
       {erro && (
         <View className="border border-risco rounded-xl p-3 mb-4">

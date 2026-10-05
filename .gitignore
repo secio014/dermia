@@ -83,3 +83,7 @@ scripts/*.local.sql
 supabase/functions/deno.json
 supabase/functions/deno.jsonc
 supabase/functions/deno.lock
+
+# Fotos clínicas de referência da IA (dados de pacientes — LGPD, nunca versionar)
+ia-referencias/
+dermia-docs-doenca.docx

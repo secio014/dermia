@@ -220,6 +220,10 @@ export default function RootLayout() {
         // Mesmo header em toda tela sem barra lateral/inferior (web estreita e
         // app nativo): marca à esquerda, menu + tema à direita — ver HeaderPadrao.
         header: () => <HeaderPadrao />,
+        // Transição entre telas: deslize horizontal suave (app nativo; na web
+        // o Stack não anima — lá a entrada fica por conta do <Surgir>).
+        animation: 'slide_from_right',
+        animationDuration: 280,
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -230,6 +234,9 @@ export default function RootLayout() {
       <Stack.Screen name="admin" options={{ presentation: usarShell ? 'card' : 'modal' }} />
       <Stack.Screen name="consulta/nova" options={{ presentation: usarShell ? 'card' : 'modal' }} />
       <Stack.Screen name="consulta/[id]" />
+      {/* Câmera e foto entram dissolvendo — mais calmo que um deslize. */}
+      <Stack.Screen name="paciente/[id]/lesao/[lesaoId]/foto/nova" options={{ animation: 'fade' }} />
+      <Stack.Screen name="paciente/[id]/lesao/[lesaoId]/foto/[analiseId]" options={{ animation: 'fade' }} />
     </Stack>
   );
 

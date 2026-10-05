@@ -3,7 +3,11 @@ import { Redirect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Animated, Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
+import Aurora from '@/components/efeitos/Aurora';
+import Particulas from '@/components/efeitos/Particulas';
+import { COR_ACOLHEDORA } from '@/components/efeitos/RealceLesao';
 import AoAparecer from '@/components/site/AoAparecer';
+import PreviaApp from '@/components/site/PreviaApp';
 import CartaoHover from '@/components/site/CartaoHover';
 import CartaoPlano, { type Plano } from '@/components/site/CartaoPlano';
 import TopoSite from '@/components/site/TopoSite';
@@ -32,6 +36,12 @@ const COMO_FUNCIONA: { icone: Icone; titulo: string; texto: string }[] = [
     titulo: 'Evolução e relatórios',
     texto: 'Comparação temporal das fotos, gráficos de cicatrização e relatórios em PDF para o convênio.',
   },
+];
+
+const SELOS: [Icone, string][] = [
+  ['shield-checkmark-outline', 'Dados protegidos (LGPD)'],
+  ['person-outline', 'Validação sempre do profissional'],
+  ['phone-portrait-outline', 'Celular e navegador'],
 ];
 
 const PARA_QUEM: [Icone, string][] = [
@@ -107,7 +117,18 @@ function BotaoCTA({
         onPress={onPress}
         onHoverIn={() => animar(1)}
         onHoverOut={() => animar(0)}
-        style={({ pressed }) => ({
+        style={(estado) => {
+          const { pressed, hovered } = estado as { pressed: boolean; hovered?: boolean };
+          return {
+          ...(Platform.OS === 'web'
+            ? ({
+                transition: 'box-shadow 220ms ease',
+                backgroundImage: primario ? `linear-gradient(135deg, ${cores.primaria}, #FF7A59)` : undefined,
+                boxShadow: primario
+                  ? `0 ${hovered ? 12 : 6}px ${hovered ? 32 : 18}px -10px ${cores.primaria}AA`
+                  : 'none',
+              } as object)
+            : null),
           borderRadius: 12,
           paddingHorizontal: 24,
           paddingVertical: 14,
@@ -117,7 +138,8 @@ function BotaoCTA({
           borderColor: cores.borda,
           backgroundColor: primario ? cores.primaria : cores.superficie,
           opacity: pressed ? 0.85 : 1,
-        })}>
+          };
+        }}>
         <Text style={{ fontWeight: '600', color: primario ? '#FFFFFF' : cores.texto }}>{rotulo}</Text>
       </Pressable>
     </Animated.View>
@@ -165,51 +187,81 @@ export default function Landing() {
 
       <ScrollView ref={scrollRef} className="flex-1">
         {/* Hero */}
-        <View className="w-full pt-24 pb-20" style={{ alignItems: 'center' }}>
-          <View style={{ ...bloco, alignItems: 'center' }}>
-            {/* halo suave da marca atrás do título */}
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: -80,
-                left: '50%',
-                marginLeft: -260,
-                width: 520,
-                height: 520,
-                borderRadius: 260,
-                backgroundColor: cores.primaria,
-                opacity: 0.06,
-              }}
-            />
-            <AoAparecer delay={0}>
-              <LogoDermia size={72} />
-            </AoAparecer>
-            <AoAparecer delay={80}>
-              <Text
-                className="text-texto font-bold mt-5 text-center"
-                style={{ fontSize: largo ? 46 : 28, lineHeight: largo ? 54 : 36, maxWidth: 820 }}>
-                Acompanhamento clínico de queimaduras com apoio de IA
-              </Text>
-            </AoAparecer>
-            <AoAparecer delay={140}>
-              <Text
-                className="text-secundario text-base mt-4 text-center"
-                style={{ maxWidth: 620 }}>
-                Do registro da lesão à alta: fotos padronizadas, análise assistida, evolução
-                documentada e um portal para o paciente acompanhar o tratamento.
-              </Text>
-            </AoAparecer>
+        <View className="w-full pt-20 pb-20" style={{ alignItems: 'center', overflow: 'hidden' }}>
+          {/* luz difusa + partículas no fundo (no lugar do círculo chapado) */}
+          <Aurora cor={cores.primaria} intensidade={0.22} />
+          <Particulas cor={COR_ACOLHEDORA} quantidade={12} altura={640} />
+          <View
+            style={{
+              ...bloco,
+              flexDirection: largo ? 'row' : 'column',
+              alignItems: 'center',
+              gap: largo ? 48 : 40,
+            }}>
+            <View style={{ flex: largo ? 1.1 : undefined, alignItems: largo ? 'flex-start' : 'center' }}>
+              <AoAparecer delay={0}>
+                <View className="flex-row items-center gap-2 rounded-full border border-primaria/30 bg-primaria/10 px-3 py-1.5 mb-6">
+                  <LogoDermia size={14} />
+                  <Text className="text-primaria text-xs font-semibold">
+                    Novo: Assistente IA especializado em queimaduras
+                  </Text>
+                </View>
+              </AoAparecer>
+              <AoAparecer delay={80}>
+                <Text
+                  className={`text-texto font-bold ${largo ? 'text-left' : 'text-center'}`}
+                  style={{ fontSize: largo ? 52 : 30, lineHeight: largo ? 60 : 38, maxWidth: 640, letterSpacing: -0.5 }}>
+                  Acompanhamento clínico de queimaduras{' '}
+                  <Text
+                    style={
+                      {
+                        color: cores.primaria,
+                        backgroundImage: `linear-gradient(90deg, ${cores.primaria}, #FF8A65)`,
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      } as object
+                    }>
+                    com apoio de IA
+                  </Text>
+                </Text>
+              </AoAparecer>
+              <AoAparecer delay={140}>
+                <Text
+                  className={`text-secundario mt-5 ${largo ? 'text-left' : 'text-center'}`}
+                  style={{ maxWidth: 560, fontSize: 17, lineHeight: 26 }}>
+                  Do registro da lesão à alta: fotos padronizadas, análise assistida, evolução
+                  documentada e um portal para o paciente acompanhar o tratamento.
+                </Text>
+              </AoAparecer>
+              <AoAparecer
+                delay={200}
+                style={{
+                  marginTop: 32,
+                  gap: 12,
+                  flexDirection: largo ? 'row' : 'column',
+                  alignSelf: largo ? 'flex-start' : 'center',
+                }}>
+                <BotaoCTA rotulo="Falar com vendas" onPress={falarComVendas} />
+                <BotaoCTA rotulo="Entrar" variante="contorno" onPress={() => router.push('/login')} />
+              </AoAparecer>
+              <AoAparecer delay={260} style={{ marginTop: 28 }}>
+                <View className={`flex-row flex-wrap gap-x-5 gap-y-2 ${largo ? '' : 'justify-center'}`}>
+                  {SELOS.map(([icone, texto]) => (
+                    <View key={texto} className="flex-row items-center gap-1.5">
+                      <Ionicons name={icone} size={15} color={cores.primaria} />
+                      <Text className="text-secundario text-xs">{texto}</Text>
+                    </View>
+                  ))}
+                </View>
+              </AoAparecer>
+            </View>
+
             <AoAparecer
-              delay={200}
-              style={{
-                marginTop: 32,
-                gap: 12,
-                flexDirection: largo ? 'row' : 'column',
-                alignSelf: 'center',
-              }}>
-              <BotaoCTA rotulo="Falar com vendas" onPress={falarComVendas} />
-              <BotaoCTA rotulo="Entrar" variante="contorno" onPress={() => router.push('/login')} />
+              delay={220}
+              distancia={30}
+              style={{ flex: largo ? 1 : undefined, alignItems: 'center', width: '100%' }}>
+              <PreviaApp />
             </AoAparecer>
           </View>
         </View>
@@ -230,10 +282,15 @@ export default function Landing() {
               {COMO_FUNCIONA.map((c, i) => (
                 <View key={c.titulo} className={largo ? 'flex-1' : 'w-full'}>
                   <CartaoHover delay={80 * (i + 1)} className="p-6">
-                    <View
-                      className="w-11 h-11 rounded-xl items-center justify-center mb-3"
-                      style={{ backgroundColor: cores.primariaSuave }}>
-                      <Ionicons name={c.icone} size={22} color={cores.primaria} />
+                    <View className="flex-row items-center justify-between mb-4">
+                      <View
+                        className="w-11 h-11 rounded-xl items-center justify-center"
+                        style={{ backgroundColor: cores.primariaSuave }}>
+                        <Ionicons name={c.icone} size={22} color={cores.primaria} />
+                      </View>
+                      <Text className="text-primaria font-bold" style={{ fontSize: 34, opacity: 0.2 }}>
+                        0{i + 1}
+                      </Text>
                     </View>
                     <Text className="text-texto text-lg font-semibold mb-1">{c.titulo}</Text>
                     <Text className="text-secundario text-sm">{c.texto}</Text>
@@ -260,13 +317,17 @@ export default function Landing() {
                 </Text>
               </AoAparecer>
               <View className={largo ? 'flex-1 gap-3' : 'gap-3'}>
-                {PARA_QUEM.map(([icone, texto]) => (
-                  <View
-                    key={texto}
-                    className="flex-row items-center gap-3 rounded-xl border border-borda bg-superficie p-4">
-                    <Ionicons name={icone} size={20} color={cores.primaria} />
-                    <Text className="text-texto text-sm flex-1">{texto}</Text>
-                  </View>
+                {PARA_QUEM.map(([icone, texto], i) => (
+                  <AoAparecer key={texto} delay={90 * i}>
+                    <View className="flex-row items-center gap-3 rounded-xl border border-borda bg-superficie p-4">
+                      <View
+                        className="w-9 h-9 rounded-lg items-center justify-center"
+                        style={{ backgroundColor: cores.primariaSuave }}>
+                        <Ionicons name={icone} size={18} color={cores.primaria} />
+                      </View>
+                      <Text className="text-texto text-sm flex-1">{texto}</Text>
+                    </View>
+                  </AoAparecer>
                 ))}
               </View>
             </View>
@@ -303,19 +364,46 @@ export default function Landing() {
         {/* Contato */}
         <View className="w-full py-20" style={{ alignItems: 'center' }}>
           <View style={bloco}>
-            <AoAparecer style={{ alignItems: 'center' }}>
-              <Eyebrow>Contato</Eyebrow>
-              <Text className="text-texto text-2xl font-bold text-center">Vamos conversar</Text>
-              <Text className="text-secundario mt-2 text-center" style={{ maxWidth: 560 }}>
-                Conte sobre a sua clínica ou hospital e montamos uma proposta e um piloto
-                acompanhado.
-              </Text>
-              <View className="mt-6">
-                <BotaoCTA rotulo="Falar com vendas" onPress={falarComVendas} />
+            <AoAparecer>
+              {/* Faixa final com gradiente da marca */}
+              <View
+                className="rounded-3xl px-8 py-14 items-center overflow-hidden"
+                style={
+                  {
+                    backgroundColor: cores.primaria,
+                    backgroundImage: `linear-gradient(135deg, ${cores.primaria} 0%, #E0485E 55%, #FF8A65 100%)`,
+                    boxShadow: `0 30px 80px -30px ${cores.primaria}99`,
+                  } as object
+                }>
+                <Particulas cor="#FFFFFF" quantidade={10} altura={380} />
+                <Text
+                  className="text-white text-xs font-bold uppercase mb-2"
+                  style={{ letterSpacing: 1.2, opacity: 0.85 }}>
+                  Contato
+                </Text>
+                <Text className="text-white font-bold text-center" style={{ fontSize: largo ? 32 : 24 }}>
+                  Vamos conversar sobre a sua equipe
+                </Text>
+                <Text className="text-white mt-3 text-center" style={{ maxWidth: 560, opacity: 0.9 }}>
+                  Conte sobre a sua clínica ou hospital e montamos uma proposta e um piloto
+                  acompanhado.
+                </Text>
+                <View className={`mt-8 gap-3 ${largo ? 'flex-row' : ''}`}>
+                  <Pressable
+                    onPress={falarComVendas}
+                    className="bg-white rounded-xl px-6 py-3.5 items-center justify-center flex-row gap-2">
+                    <Ionicons name="mail-outline" size={18} color={cores.primaria} />
+                    <Text style={{ color: cores.primaria }} className="font-semibold">
+                      Falar com vendas
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.push('/login')}
+                    className="rounded-xl px-6 py-3.5 items-center justify-center border border-white/50">
+                    <Text className="text-white font-semibold">Já tenho conta</Text>
+                  </Pressable>
+                </View>
               </View>
-              <Pressable onPress={() => router.push('/login')} style={{ marginTop: 16 }}>
-                <Text className="text-primaria font-medium">Já tem conta? Entrar</Text>
-              </Pressable>
             </AoAparecer>
           </View>
         </View>

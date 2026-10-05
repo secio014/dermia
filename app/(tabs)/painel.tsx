@@ -13,8 +13,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import PacienteCard, { type PainelPaciente } from '@/components/PacienteCard';
+import Surgir from '@/components/efeitos/Surgir';
 import Protegido from '@/components/Protegido';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { palette } from '@/constants/Colors';
+import { larguraColuna, useColunas } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { supabase } from '@/.lib/supabase';
 
@@ -47,9 +50,25 @@ function Estatistica({
   cor: string;
 }) {
   return (
-    <View className="bg-superficie border border-borda rounded-2xl p-3 flex-1 min-w-[140px]">
-      <Ionicons name={icone} size={18} color={cor} />
-      <Text className="text-texto text-2xl font-bold mt-1">{valor}</Text>
+    <View className="bg-superficie border border-borda rounded-2xl p-3 flex-1 min-w-[140px] overflow-hidden">
+      {/* brilho difuso da cor do indicador no canto */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: -28,
+          right: -28,
+          width: 90,
+          height: 90,
+          borderRadius: 45,
+          backgroundColor: cor,
+          opacity: 0.09,
+        }}
+      />
+      <View className="w-8 h-8 rounded-lg items-center justify-center" style={{ backgroundColor: `${cor}1A` }}>
+        <Ionicons name={icone} size={17} color={cor} />
+      </View>
+      <Text className="text-texto text-2xl font-bold mt-2">{valor}</Text>
       <Text className="text-secundario text-xs">{rotulo}</Text>
     </View>
   );
@@ -72,6 +91,7 @@ export default function Painel() {
 
 function TelaInicio() {
   const { cores } = useTema();
+  const colunas = useColunas();
   const [pacientes, setPacientes] = useState<PainelPaciente[]>([]);
   const [semLesao, setSemLesao] = useState<SemLesao[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -156,10 +176,11 @@ function TelaInicio() {
 
   const cabecalho = (
     <View className="pt-4">
-      <Text className="text-texto text-2xl font-bold mb-1">Início</Text>
-      <Text className="text-secundario mb-4">
-        Pacientes ativos (com lesão em acompanhamento) e inativos.
-      </Text>
+      <CabecalhoTela
+        icone="home"
+        titulo="Início"
+        subtitulo="Pacientes ativos (com lesão em acompanhamento) e inativos."
+      />
 
       <View className="flex-row flex-wrap gap-2 mb-4">
         <Estatistica icone="people-outline" valor={stats.ativos} rotulo="Pacientes ativos" cor={palette.primaria} />
@@ -266,7 +287,7 @@ function TelaInicio() {
   }
 
   const vazio = (icone: React.ComponentProps<typeof Ionicons>['name'], texto: string) => (
-    <View className="items-center justify-center px-6 py-16 bg-superficie border border-borda rounded-xl">
+    <View className="w-full items-center justify-center px-6 py-16 bg-superficie border border-borda rounded-xl">
       <Ionicons name={icone} size={30} color={cores.secundario} />
       <Text className="text-secundario text-center text-sm mt-2">{texto}</Text>
     </View>
@@ -282,12 +303,17 @@ function TelaInicio() {
             : 'Nada nesse filtro ou nessa busca.'
         )
       ) : (
-        lista.map((item) => (
-          <Pressable
+        // Entrada em cascata (atraso limitado: lista longa não fica esperando).
+        lista.map((item, i) => (
+          <Surgir
             key={item.lesao_id ?? item.paciente_id}
-            onPress={() => router.push(`/paciente/${item.paciente_id}`)}>
-            <PacienteCard paciente={item} />
-          </Pressable>
+            atraso={Math.min(i, 8) * 45}
+            duracao={280}
+            style={{ width: larguraColuna(colunas) }}>
+            <Pressable onPress={() => router.push(`/paciente/${item.paciente_id}`)}>
+              <PacienteCard paciente={item} />
+            </Pressable>
+          </Surgir>
         ))
       )
     ) : semLesaoLista.length === 0 ? (
@@ -302,6 +328,7 @@ function TelaInicio() {
         <Pressable
           key={p.id}
           onPress={() => router.push(`/paciente/${p.id}`)}
+          style={{ width: larguraColuna(colunas) }}
           className="bg-superficie border border-borda rounded-xl p-4 mb-3 flex-row items-center">
           <View
             style={{ width: 6, alignSelf: 'stretch', borderRadius: 3 }}
@@ -326,7 +353,7 @@ function TelaInicio() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-5"
-      contentContainerClassName="pb-8 w-full max-w-3xl self-center"
+      contentContainerClassName="pb-8 w-full"
       refreshControl={
         <RefreshControl
           refreshing={atualizando}
@@ -338,7 +365,10 @@ function TelaInicio() {
         />
       }>
       {cabecalho}
-      {conteudo}
+      {/* grade responsiva: 1 coluna no celular, 2–3 em telas largas */}
+      <View className="flex-row flex-wrap" style={{ columnGap: 12 }}>
+        {conteudo}
+      </View>
     </ScrollView>
   );
 }

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Animated, Easing, Linking, Pressable, Text, View } from 'react-native';
+import { Animated, Linking, Platform, Pressable, Text, View } from 'react-native';
 
 import { useTema } from '@/.lib/tema';
+import { ESTILO_SENTINELA, useRevelar } from './useRevelar';
 
 export type Plano = {
   nome: string;
@@ -20,20 +21,8 @@ const EMAIL_COMERCIAL = 'comercial@dermia.tech';
  */
 export default function CartaoPlano({ plano, delay = 0 }: { plano: Plano; delay?: number }) {
   const { cores } = useTema();
-  const entrada = useRef(new Animated.Value(0)).current;
+  const { t: entrada, sentinela } = useRevelar(delay);
   const hover = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const anim = Animated.timing(entrada, {
-      toValue: 1,
-      duration: 460,
-      delay,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [entrada, delay]);
 
   function animarHover(para: number) {
     Animated.timing(hover, { toValue: para, duration: 170, useNativeDriver: false }).start();
@@ -72,18 +61,24 @@ export default function CartaoPlano({ plano, delay = 0 }: { plano: Plano; delay?
           outputRange: [corBordaBase, cores.primaria],
         }),
         backgroundColor: cores.superficie,
+        // Plano em destaque: halo suave da cor da marca (web).
+        ...(plano.destaque && Platform.OS === 'web'
+          ? ({ boxShadow: `0 0 0 1px ${cores.primaria}55, 0 18px 50px -18px ${cores.primaria}88` } as object)
+          : null),
       }}>
+      <View ref={sentinela} pointerEvents="none" style={ESTILO_SENTINELA} />
       <Pressable
         onPress={falarComVendas}
         onHoverIn={() => animarHover(1)}
         onHoverOut={() => animarHover(0)}
         style={{ padding: 24 }}>
         {plano.destaque && (
-          <Text
-            className="text-primaria text-xs font-bold uppercase mb-2"
-            style={{ letterSpacing: 1 }}>
-            Mais escolhido
-          </Text>
+          <View className="self-start flex-row items-center gap-1 rounded-full px-2.5 py-1 mb-3 bg-primaria">
+            <Ionicons name="star" size={11} color="#FFFFFF" />
+            <Text className="text-white text-[11px] font-bold uppercase" style={{ letterSpacing: 0.8 }}>
+              Mais escolhido
+            </Text>
+          </View>
         )}
         <Text className="text-texto text-xl font-bold">{plano.nome}</Text>
         <Text className="text-secundario text-sm mt-1 mb-4">{plano.publico}</Text>

@@ -1,18 +1,19 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { Animated, Easing, type StyleProp, type ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { Animated, View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { ESTILO_SENTINELA, useRevelar } from './useRevelar';
 
 /**
- * Envolve um bloco da landing e faz ele surgir com fade + leve subida ao montar.
- * `delay` (ms) escalona as seções para uma entrada em cascata.
+ * Envolve um bloco da landing e faz ele surgir com fade + leve subida quando
+ * entra na tela (rolagem). `delay` (ms) escalona os itens de uma mesma seção.
  *
- * Layout fica no `style` (não em className) — o NativeWind não aplica className
- * em `Animated.View` neste projeto, então quem chama passa flex/alinhamento via
- * `style` e deixa as classes nos <View>/<Text> filhos.
+ * Layout fica no `style` — quem chama passa flex/alinhamento via `style` e
+ * deixa as classes nos <View>/<Text> filhos.
  */
 export default function AoAparecer({
   children,
   delay = 0,
-  distancia = 16,
+  distancia = 18,
   style,
 }: {
   children: ReactNode;
@@ -20,31 +21,18 @@ export default function AoAparecer({
   distancia?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  const t = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const anim = Animated.timing(t, {
-      toValue: 1,
-      duration: 460,
-      delay,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [t, delay]);
+  const { t, sentinela } = useRevelar(delay);
 
   return (
     <Animated.View
       style={[
         {
           opacity: t,
-          transform: [
-            { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [distancia, 0] }) },
-          ],
+          transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [distancia, 0] }) }],
         },
         style,
       ]}>
+      <View ref={sentinela} pointerEvents="none" style={ESTILO_SENTINELA} />
       {children}
     </Animated.View>
   );

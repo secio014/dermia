@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import Protegido from '@/components/Protegido';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { palette } from '@/constants/Colors';
 import { useLargo } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
@@ -172,7 +173,7 @@ function TelaAgenda() {
   return (
     <View className="flex-1 bg-fundo">
       <View className="px-4 pt-4 pb-2 flex-row items-center justify-between">
-        <Text className="text-texto text-2xl font-bold">Agenda</Text>
+        <CabecalhoTela icone="calendar" titulo="Agenda" subtitulo="Consultas da semana" className="flex-1" />
         <Pressable
           onPress={() => router.push('/consulta/nova')}
           className="bg-primaria rounded-xl px-3 py-2 flex-row items-center gap-1.5">
@@ -306,7 +307,7 @@ function TelaAgenda() {
           </ScrollView>
 
           {!largo && (
-            <View className="px-4 pb-10 w-full max-w-4xl self-center">{listaProximas}</View>
+            <View className="px-4 pb-10 w-full">{listaProximas}</View>
           )}
         </ScrollView>
 

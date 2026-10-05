@@ -10,6 +10,8 @@ import SecaoTratamento from '@/components/portal/SecaoTratamento';
 import SecaoConta from '@/components/portal/SecaoConta';
 import BotaoTema from '@/components/ui/BotaoTema';
 import LogoDermia from '@/components/ui/LogoDermia';
+import Surgir from '@/components/efeitos/Surgir';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { usePapelEfetivo } from '@/.lib/acesso';
 import { supabase } from '@/.lib/supabase';
 
@@ -130,10 +132,9 @@ export default function PortalPaciente() {
       ) : (
         <ScrollView
           className="flex-1 px-4 pt-2"
-          contentContainerClassName="w-full max-w-2xl self-center"
+          contentContainerClassName="w-full"
           contentContainerStyle={{ paddingBottom: 40 }}>
-          <Text className="text-texto text-2xl font-bold mb-1">Olá, {paciente.nome}</Text>
-          <Text className="text-secundario mb-4">Seu acompanhamento</Text>
+          <CabecalhoTela icone="heart" titulo={`Olá, ${paciente.nome}`} subtitulo="Seu acompanhamento" />
 
           <CartaoClinica clinicaId={paciente.clinicaId} responsavelId={paciente.responsavelId} />
 
@@ -154,10 +155,13 @@ export default function PortalPaciente() {
             })}
           </View>
 
-          {aba === 'hoje' && <SecaoHoje pacienteId={paciente.id} />}
-          {aba === 'evolucao' && <SecaoEvolucao pacienteId={paciente.id} desde={paciente.desde} />}
-          {aba === 'tratamento' && <SecaoTratamento pacienteId={paciente.id} />}
-          {aba === 'conta' && <SecaoConta />}
+          {/* key={aba}: cada troca de aba entra dissolvendo */}
+          <Surgir key={aba} duracao={260}>
+            {aba === 'hoje' && <SecaoHoje pacienteId={paciente.id} />}
+            {aba === 'evolucao' && <SecaoEvolucao pacienteId={paciente.id} desde={paciente.desde} />}
+            {aba === 'tratamento' && <SecaoTratamento pacienteId={paciente.id} />}
+            {aba === 'conta' && <SecaoConta />}
+          </Surgir>
         </ScrollView>
       )}
     </View>

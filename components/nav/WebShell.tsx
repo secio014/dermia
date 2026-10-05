@@ -2,13 +2,13 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Animated, Pressable, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, Text, View } from 'react-native';
 
 import { ITENS_NAV, ROTAS_PRINCIPAIS } from '@/components/nav/itens';
 import WebFooter from '@/components/nav/WebFooter';
 import LogoDermia from '@/components/ui/LogoDermia';
+import { useMovimentoReduzido } from '@/components/efeitos/movimento';
 import { usePapelEfetivo } from '@/.lib/acesso';
-import { LARGURA_CONTEUDO } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 import { definirVisao, type VisaoSimulada } from '@/.lib/visao';
 
@@ -25,6 +25,21 @@ const LARGURA_FECHADA = 64;
  */
 export default function WebShell({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
+  const reduzido = useMovimentoReduzido();
+
+  // Transição entre páginas: a cada troca de rota o conteúdo dissolve e sobe
+  // levemente. Anima o contêiner (não remonta a pilha), então é barato e não
+  // perde o estado das telas.
+  const entrada = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    entrada.setValue(0);
+    Animated.timing(entrada, {
+      toValue: 1,
+      duration: reduzido ? 120 : 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [pathname, entrada, reduzido]);
   const router = useRouter();
   const emPaginaInterna = !ROTAS_PRINCIPAIS.includes(pathname);
 
@@ -228,7 +243,7 @@ export default function WebShell({ children }: { children?: ReactNode }) {
       <View className="flex-1 bg-fundo">
         {/* Conteúdo centralizado, com um teto largo para aproveitar monitores
             grandes. As telas internas ainda limitam a própria largura. */}
-        <View className="flex-1 w-full self-center px-6" style={{ maxWidth: LARGURA_CONTEUDO }}>
+        <View className="flex-1 w-full px-6 xl:px-10">
           {emPaginaInterna && (
             <Pressable
               onPress={voltar}
@@ -238,7 +253,14 @@ export default function WebShell({ children }: { children?: ReactNode }) {
               <Text className="text-primaria font-medium">Voltar</Text>
             </Pressable>
           )}
-          {children ?? <Slot />}
+          <Animated.View
+            style={{
+              flex: 1,
+              opacity: entrada,
+              transform: [{ translateY: entrada.interpolate({ inputRange: [0, 1], outputRange: [reduzido ? 0 : 10, 0] }) }],
+            }}>
+            {children ?? <Slot />}
+          </Animated.View>
         </View>
         <WebFooter />
       </View>

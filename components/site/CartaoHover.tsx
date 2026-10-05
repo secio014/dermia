@@ -1,7 +1,8 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { Animated, Easing, Pressable, View } from 'react-native';
+import { useRef, type ReactNode } from 'react';
+import { Animated, Pressable, View } from 'react-native';
 
 import { useTema } from '@/.lib/tema';
+import { ESTILO_SENTINELA, useRevelar } from './useRevelar';
 
 /**
  * Cartão decorativo da landing. Entra com fade/subida ao montar (`delay` em ms)
@@ -18,20 +19,8 @@ export default function CartaoHover({
   delay?: number;
 }) {
   const { cores } = useTema();
-  const entrada = useRef(new Animated.Value(0)).current;
+  const { t: entrada, sentinela } = useRevelar(delay);
   const hover = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const anim = Animated.timing(entrada, {
-      toValue: 1,
-      duration: 460,
-      delay,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    });
-    anim.start();
-    return () => anim.stop();
-  }, [entrada, delay]);
 
   function animarHover(para: number) {
     Animated.timing(hover, { toValue: para, duration: 170, useNativeDriver: false }).start();
@@ -64,6 +53,7 @@ export default function CartaoHover({
           }),
           backgroundColor: cores.fundo,
         }}>
+        <View ref={sentinela} pointerEvents="none" style={ESTILO_SENTINELA} />
         <View className={className}>{children}</View>
       </Animated.View>
     </Pressable>

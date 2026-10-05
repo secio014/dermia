@@ -3,6 +3,7 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router
 import { ActivityIndicator, Alert, Image, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import ValidacaoIA, { type ResultadoIA } from '@/components/ValidacaoIA';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { palette } from '@/constants/Colors';
 import { avisar } from '@/.lib/aviso';
 import { excluirAnalise, iniciarAnaliseIA, obterUrlAssinada } from '@/.lib/foto';
@@ -142,9 +143,10 @@ export default function DetalheAnalise() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-4xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="scan" titulo="Análise da foto" subtitulo="Sugestão da IA — confira e valide" />
       {urlFoto ? (
         <Image
           source={{ uri: urlFoto }}

@@ -508,11 +508,22 @@ export default function DetalhePaciente() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : 'w-full max-w-2xl self-center'}
+      contentContainerClassName={largo ? 'w-full' : 'w-full'}
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
-      <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome_completo}</Text>
-      <Text className="text-secundario mb-5">{paciente?.codigo_pseudonimo}</Text>
+      <View className="flex-row items-start justify-between gap-3 mb-5">
+        <View className="flex-1">
+          <Text className="text-texto text-xl font-bold mb-1">{paciente?.nome_completo}</Text>
+          <Text className="text-secundario">{paciente?.codigo_pseudonimo}</Text>
+        </View>
+        <Pressable
+          onPress={() => router.push(`/assistente?paciente=${id}`)}
+          className="flex-row items-center gap-1.5 bg-superficie border border-primaria rounded-xl px-3 py-2"
+          accessibilityLabel="Perguntar à IA sobre este paciente">
+          <Ionicons name="sparkles" size={16} color={cores.primaria} />
+          <Text className="text-primaria text-xs font-semibold">Perguntar à IA</Text>
+        </Pressable>
+      </View>
 
       {largo ? (
         <>

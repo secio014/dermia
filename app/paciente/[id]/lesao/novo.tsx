@@ -3,6 +3,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import MapaCorporal from '@/components/MapaCorporal';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { useLargo } from '@/.lib/responsivo';
@@ -143,9 +144,10 @@ export default function NovaLesao() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
+      contentContainerClassName={largo ? 'w-full' : undefined}
       contentContainerStyle={{ paddingBottom: 32 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="flame" titulo="Nova lesão" subtitulo="Marque as regiões no mapa — a SCQ é calculada sozinha" />
       {largo ? (
         <View className="flex-row gap-6">
           <View className="flex-1">{blocoMapa}</View>

@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 
 import SeletorData from '@/components/ui/SeletorData';
 import SeletorCatalogo from '@/components/ui/SeletorCatalogo';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { avisar } from '@/.lib/aviso';
 import { useTema } from '@/.lib/tema';
 import {
@@ -71,9 +72,10 @@ export default function NovaPrescricao() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-3xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="medkit" titulo="Nova prescrição" subtitulo="Remédio ou curativo do catálogo" />
 
       <Text className="text-secundario text-xs font-semibold mb-1">REMÉDIO / CURATIVO</Text>
       <View className="mb-3">

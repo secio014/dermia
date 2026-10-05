@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { palette } from '@/constants/Colors';
 import { enviarDocumentoPorEmail } from '@/.lib/documentos';
 import { obterUrlAssinada } from '@/.lib/foto';
@@ -114,10 +115,10 @@ export default function RelatorioPaciente() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-4xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
-      <Text className="text-texto text-lg font-bold mb-4">Relatório em PDF</Text>
+      <CabecalhoTela icone="document-text" titulo="Relatório em PDF" subtitulo="Histórico do paciente pronto para o convênio" />
 
       <Text className="text-secundario text-xs mb-1">Período (opcional)</Text>
       <View className="flex-row gap-3 mb-4">

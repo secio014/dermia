@@ -3,6 +3,9 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import CameraCapture from '@/components/CameraCapture';
+import Particulas from '@/components/efeitos/Particulas';
+import { COR_ACOLHEDORA } from '@/components/efeitos/RealceLesao';
+import Surgir from '@/components/efeitos/Surgir';
 import { palette } from '@/constants/Colors';
 import { processarEEnviarFoto } from '@/.lib/foto';
 import { obterPerfilProfissional } from '@/.lib/perfil';
@@ -58,8 +61,11 @@ export default function NovaFoto() {
   if (enviando) {
     return (
       <View className="flex-1 bg-fundo items-center justify-center px-8">
-        <ActivityIndicator color={palette.primaria} />
-        <Text className="text-secundario text-center mt-4">Enviando foto…</Text>
+        <Particulas cor={COR_ACOLHEDORA} quantidade={8} />
+        <Surgir className="items-center">
+          <ActivityIndicator color={palette.primaria} />
+          <Text className="text-secundario text-center mt-4">Enviando foto…</Text>
+        </Surgir>
       </View>
     );
   }

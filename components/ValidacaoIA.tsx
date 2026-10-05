@@ -7,8 +7,33 @@ import { GRAUS_CLINICOS } from '@/.lib/scq';
 export type ResultadoIA = {
   grau_sugerido?: string;
   confianca?: number;
+  fase?: 'aguda' | 'cicatricial';
+  achados?: string[];
   observacao?: string;
 };
+
+// Rótulos dos achados que a Edge Function analisar-lesao pode devolver
+// (vocabulário em supabase/functions/analisar-lesao/conhecimento/vocabulario.ts).
+const ROTULOS_ACHADOS: Record<string, string> = {
+  queloide: 'Queloide',
+  hipertrofica: 'Hipertrófica',
+  hipercromica: 'Hipercrômica',
+  hipocromica: 'Hipocrômica',
+  hiperemia: 'Hiperemia',
+  enxerto_malha: 'Enxerto em malha',
+  area_doadora: 'Área doadora',
+  deformidade: 'Deformidade',
+  ferida_aberta: 'Ferida aberta',
+};
+
+const ROTULOS_FASE: Record<string, string> = {
+  aguda: 'Fase aguda',
+  cicatricial: 'Fase cicatricial',
+};
+
+function rotuloDoGrau(id?: string) {
+  return GRAUS_CLINICOS.find((g) => g.id === id)?.rotulo ?? id;
+}
 
 // Espelha o prefixo gravado pela Edge Function analisar-lesao quando a foto é imprópria.
 const PREFIXO_IMAGEM_INADEQUADA = 'IMAGEM_INADEQUADA: ';
@@ -83,10 +108,25 @@ export default function ValidacaoIA({
       </Text>
 
       <Text className="text-texto font-semibold mb-1">
-        Grau sugerido: {resultado?.grau_sugerido ?? 'não informado'}
+        Grau sugerido: {rotuloDoGrau(resultado?.grau_sugerido) ?? 'não informado'}
       </Text>
       {confianca != null && (
-        <Text className="text-secundario text-xs mb-3">Confiança: {Math.round(confianca * 100)}%</Text>
+        <Text className="text-secundario text-xs mb-2">
+          Confiança: {Math.round(confianca * 100)}%
+          {resultado?.fase && ROTULOS_FASE[resultado.fase] ? ` · ${ROTULOS_FASE[resultado.fase]}` : ''}
+        </Text>
+      )}
+      {!!resultado?.achados?.length && (
+        <View className="flex-row flex-wrap gap-1.5 mb-2">
+          {resultado.achados.map((a) => (
+            <View key={a} className="bg-fundo border border-borda rounded-full px-2.5 py-0.5">
+              <Text className="text-texto text-xs">{ROTULOS_ACHADOS[a] ?? a}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {!!resultado?.observacao && (
+        <Text className="text-secundario text-xs mb-2">{resultado.observacao}</Text>
       )}
 
       {!editando ? (

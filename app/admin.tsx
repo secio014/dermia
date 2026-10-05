@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import Protegido from '@/components/Protegido';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { palette } from '@/constants/Colors';
 import { usePerfilAtual } from '@/.lib/acesso';
 import { avisar } from '@/.lib/aviso';
@@ -271,9 +272,13 @@ function PainelAdmin() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-4xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text className="text-texto text-xl font-bold mb-4">Painel de Admin</Text>
+      <CabecalhoTela
+        icone="shield-checkmark"
+        titulo="Painel de Admin"
+        subtitulo="Equipe, pacientes e indicadores da clínica"
+      />
 
       <View className="flex-row gap-3 mb-3">
         <CartaoIndicador

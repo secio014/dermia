@@ -3,6 +3,7 @@ import { router, Stack } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { avisar } from '@/.lib/aviso';
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { mascararTelefone, telefoneDigitos, telefoneValido } from '@/.lib/telefone';
@@ -77,10 +78,11 @@ export default function NovoPaciente() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-3xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}
       keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="person-add" titulo="Novo paciente" subtitulo="Dados básicos e consentimento LGPD" />
       <Text className="text-secundario mb-1">Código gerado automaticamente</Text>
       <Text className="text-texto text-lg font-semibold mb-6">{codigo}</Text>
 

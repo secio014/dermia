@@ -4,7 +4,7 @@ import type { Ionicons } from '@expo/vector-icons';
 export type ItemNav = {
   nome: string;
   titulo: string;
-  rota: '/painel' | '/agenda' | '/ajustes';
+  rota: '/painel' | '/agenda' | '/assistente' | '/ajustes';
   icone: ComponentProps<typeof Ionicons>['name'];
 };
 
@@ -13,6 +13,7 @@ export type ItemNav = {
 export const ITENS_NAV: ItemNav[] = [
   { nome: 'painel', titulo: 'Início', rota: '/painel', icone: 'home-outline' },
   { nome: 'agenda', titulo: 'Agenda', rota: '/agenda', icone: 'calendar-outline' },
+  { nome: 'assistente', titulo: 'Assistente IA', rota: '/assistente', icone: 'sparkles-outline' },
   { nome: 'ajustes', titulo: 'Ajustes', rota: '/ajustes', icone: 'settings-outline' },
 ];
 
@@ -20,4 +21,4 @@ export const ITENS_NAV: ItemNav[] = [
 // nestes o header mostra a marca normal. Em qualquer outra rota (subpáginas
 // como paciente/novo, consulta/[id], paciente/[id]/lesao/...) o header mostra
 // "‹ Voltar" no lugar.
-export const ROTAS_PRINCIPAIS = ['/', '/painel', '/agenda', '/ajustes', '/global', '/portal'];
+export const ROTAS_PRINCIPAIS = ['/', '/painel', '/agenda', '/assistente', '/ajustes', '/global', '/portal'];

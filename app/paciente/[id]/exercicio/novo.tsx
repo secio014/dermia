@@ -3,6 +3,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SeletorCatalogo from '@/components/ui/SeletorCatalogo';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { avisar } from '@/.lib/aviso';
 import {
   criarExercicioCatalogo,
@@ -98,9 +99,10 @@ export default function NovoExercicio() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-3xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="barbell" titulo="Novo exercício" subtitulo="Aparece no portal do paciente com lembrete diário" />
 
       <Text className="text-secundario text-xs font-semibold mb-1">EXERCÍCIO</Text>
       <View className="mb-3">

@@ -1,6 +1,7 @@
 // Edge Function: recebe { analise_id }, busca a foto no Storage, chama o
 // Cloudflare Workers AI (modelo de visão) pra sugerir o grau clínico da
-// queimadura, valida a resposta com Zod e grava em analises_ia.
+// queimadura + achados de cicatriz (queloide, discromias, enxerto...), valida
+// a resposta com Zod e grava em analises_ia.
 //
 // Contrato (Workers AI REST):
 //   POST https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/run/{CF_AI_MODELO}
@@ -26,6 +27,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 import jpeg from 'npm:jpeg-js@0.4.4';
 import { json, preflight } from '../_shared/cors.ts';
+import { ACHADOS, FASES, GRAUS, PROMPT_USUARIO, montarPromptSistema } from './conhecimento/index.ts';
 
 const MODELO_PADRAO = '@cf/meta/llama-3.2-11b-vision-instruct';
 
@@ -34,10 +36,23 @@ const MODELO_PADRAO = '@cf/meta/llama-3.2-11b-vision-instruct';
 const PREFIXO_IMAGEM_INADEQUADA = 'IMAGEM_INADEQUADA: ';
 
 // analises_ia.confianca tem check constraint 0-1 (fração, não percentual).
+// fase/achados são opcionais e tolerantes: valor fora do vocabulário é
+// descartado em vez de derrubar a análise inteira.
 const ResultadoIA = z.object({
-  grau_sugerido: z.enum(['1', '2_superficial', '2_profundo', '3']),
+  grau_sugerido: z.enum(GRAUS),
   confianca: z.number().min(0).max(1),
-  observacao: z.string().optional(),
+  fase: z.enum(FASES).optional().catch(undefined),
+  achados: z
+    .array(z.string())
+    .optional()
+    .catch(undefined)
+    .transform((lista) => {
+      const validos = (lista ?? []).filter((a): a is (typeof ACHADOS)[number] =>
+        (ACHADOS as readonly string[]).includes(a)
+      );
+      return validos.length ? [...new Set(validos)] : undefined;
+    }),
+  observacao: z.string().optional().catch(undefined),
 });
 
 // Saída alternativa quando a IA julga a foto imprópria pra análise.
@@ -46,21 +61,9 @@ const ImagemInadequada = z.object({
   motivo: z.string().min(1).optional(),
 });
 
-const PROMPT_SISTEMA =
-  'Você é um assistente clínico de dermatologia. Responda SEMPRE e APENAS com ' +
-  'um único objeto JSON, sem texto antes ou depois, sem crases de markdown.\n' +
-  'Se a foto NÃO permitir uma avaliação confiável de queimadura — imagem preta, ' +
-  'escura demais, estourada de luz, desfocada, sem pele/lesão visível, ou que ' +
-  'claramente não é uma queimadura — responda: ' +
-  '{"imagem_adequada": false, "motivo": "<explicação curta do problema>"}.\n' +
-  'Só quando a foto for adequada, responda: ' +
-  '{"grau_sugerido": "1" | "2_superficial" | "2_profundo" | "3", ' +
-  '"confianca": <número entre 0 e 1>, "observacao": "<texto curto opcional>"}. ' +
-  'Não invente um grau para fotos ruins.';
-
-const PROMPT_USUARIO =
-  'Analise a foto de queimadura em anexo. Se der pra avaliar, classifique o grau ' +
-  'clínico; se não der, sinalize que a imagem é inadequada.';
+// O conhecimento clínico (graus, glossário, casos de referência) fica em
+// ./conhecimento/, um arquivo por assunto — ver conhecimento/README.md.
+const PROMPT_SISTEMA = montarPromptSistema();
 
 // O modelo tende a "alucinar" um laudo mesmo numa foto toda preta. Antes de
 // gastar chamada nele, rejeita frames que claramente não dá pra avaliar:
@@ -208,7 +211,7 @@ Deno.serve(async (req) => {
               ],
             },
           ],
-          max_tokens: 300,
+          max_tokens: 500,
           temperature: 0.2,
         }),
       }

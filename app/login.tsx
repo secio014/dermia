@@ -13,8 +13,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Aurora from '@/components/efeitos/Aurora';
+import Particulas from '@/components/efeitos/Particulas';
+import Surgir from '@/components/efeitos/Surgir';
+import Vidro from '@/components/efeitos/Vidro';
 import LogoDermia from '@/components/ui/LogoDermia';
 import BotaoTema from '@/components/ui/BotaoTema';
+import { useLargo } from '@/.lib/responsivo';
 import { rotaInicialDoUsuario } from '@/.lib/acesso';
 import { definirLembrar } from '@/.lib/authStorage';
 import { useTema } from '@/.lib/tema';
@@ -39,6 +44,7 @@ function traduzErro(msg: string): string {
 export default function Login() {
   const { cores } = useTema();
   const insets = useSafeAreaInsets();
+  const largo = useLargo();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [lembrar, setLembrar] = useState(true);
@@ -103,9 +109,59 @@ export default function Login() {
 
   const campo = 'bg-superficie border rounded-xl px-4 py-3 mb-1 text-texto';
 
+  // Painel da marca (só em telas largas): gradiente, partículas e os
+  // benefícios — a tela de entrada vira também uma vitrine do produto.
+  const painelMarca = (
+    <View
+      className="flex-1 justify-center px-14 overflow-hidden"
+      style={
+        {
+          backgroundColor: cores.primaria,
+          backgroundImage: `linear-gradient(150deg, ${cores.primaria} 0%, #D73A55 50%, #FF8A65 100%)`,
+        } as object
+      }>
+      <Particulas cor="#FFFFFF" quantidade={14} altura={900} />
+      <Surgir de="baixo" duracao={500}>
+        <View className="flex-row items-center gap-3 mb-10">
+          <View className="w-12 h-12 rounded-2xl bg-white items-center justify-center">
+            <LogoDermia size={28} />
+          </View>
+          <Text className="text-white text-2xl font-bold">DermIA</Text>
+        </View>
+        <Text className="text-white font-bold" style={{ fontSize: 40, lineHeight: 48, maxWidth: 520 }}>
+          Cuidado contínuo para quem trata queimaduras.
+        </Text>
+        <Text className="text-white mt-4" style={{ fontSize: 16, lineHeight: 24, maxWidth: 480, opacity: 0.9 }}>
+          Fotos padronizadas, análise assistida por IA e a evolução de cada paciente em um só lugar.
+        </Text>
+        <View className="mt-10 gap-4">
+          {(
+            [
+              ['camera-outline', 'Foto guiada e análise do grau pela IA'],
+              ['trending-up-outline', 'Evolução, ADM e escala de Vancouver'],
+              ['chatbubble-ellipses-outline', 'Assistente IA especializado em queimaduras'],
+            ] as const
+          ).map(([icone, texto], i) => (
+            <Surgir key={texto} atraso={200 + i * 120}>
+              <View className="flex-row items-center gap-3">
+                <View className="w-9 h-9 rounded-xl items-center justify-center bg-white/20">
+                  <Ionicons name={icone} size={18} color="#FFFFFF" />
+                </View>
+                <Text className="text-white text-sm font-medium">{texto}</Text>
+              </View>
+            </Surgir>
+          ))}
+        </View>
+      </Surgir>
+    </View>
+  );
+
   return (
-    <View className="flex-1 bg-fundo">
+    <View className="flex-1 bg-fundo flex-row">
       <Stack.Screen options={{ headerShown: false }} />
+      {largo && painelMarca}
+      <View className="flex-1 bg-fundo">
+      <Aurora cor={cores.primaria} intensidade={0.14} />
 
       <View
         className="flex-row items-center justify-between px-4"
@@ -124,7 +180,8 @@ export default function Login() {
           className="flex-1"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
-          <View className="w-full max-w-sm self-center">
+          <Surgir className="w-full self-center" style={{ maxWidth: 440 }}>
+          <Vidro style={{ borderRadius: 24, padding: 28 }}>
             <Text className="text-texto text-3xl font-bold mb-1">Entrar</Text>
             <Text className="text-secundario mb-8">
               Entre com o e-mail e a senha da sua conta. Uma única entrada para pacientes e equipe —
@@ -183,9 +240,11 @@ export default function Login() {
                 <Text className="text-white font-semibold">Entrar</Text>
               )}
             </Pressable>
-          </View>
+          </Vidro>
+          </Surgir>
         </ScrollView>
       </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }

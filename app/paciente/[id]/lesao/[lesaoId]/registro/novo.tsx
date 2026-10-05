@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 import { obterPerfilProfissional } from '@/.lib/perfil';
 import { supabase } from '@/.lib/supabase';
 import { CAMPOS_VANCOUVER, type EscalaCicatriz } from '@/.lib/vancouver';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 
 type Medida = {
   articulacao: string;
@@ -110,10 +111,11 @@ export default function NovoRegistro() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-3xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}
       keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="clipboard" titulo="Registro de evolução" subtitulo="ADM, dor e escala de Vancouver" />
       <Text className="text-texto font-semibold mb-2">Adicionar medida de goniometria</Text>
 
       <TextInput

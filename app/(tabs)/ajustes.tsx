@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import AlterarSenha from '@/components/ui/AlterarSenha';
 import EditarPerfil from '@/components/ui/EditarPerfil';
 import SemAcesso from '@/components/ui/SemAcesso';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { ehAdmin, usePapelEfetivo, usePerfilAtual } from '@/.lib/acesso';
 import { supabase } from '@/.lib/supabase';
 import { useTema, type PreferenciaTema } from '@/.lib/tema';
@@ -54,8 +55,8 @@ export default function TelaAjustes() {
   return (
     <ScrollView
       className="flex-1 bg-fundo"
-      contentContainerClassName="w-full max-w-3xl self-center p-4">
-      <Text className="text-texto text-2xl font-bold mb-6">Ajustes</Text>
+      contentContainerClassName="w-full p-4">
+      <CabecalhoTela icone="settings" titulo="Ajustes" subtitulo="Perfil, aparência e segurança" className="mb-6" />
 
       {perfil && (
         <Secao titulo="Conta">

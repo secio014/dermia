@@ -1,10 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link, router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
 import GraficoEvolucao, { type PontoEvolucao } from '@/components/GraficoEvolucao';
 import { palette } from '@/constants/Colors';
 import GraficoVancouver, { type PontoVancouver } from '@/components/GraficoVancouver';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { obterUrlAssinada } from '@/.lib/foto';
 import { useLargo } from '@/.lib/responsivo';
 import { supabase } from '@/.lib/supabase';
@@ -185,16 +187,19 @@ export default function EvolucaoLesao() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName={largo ? 'w-full max-w-5xl self-center' : undefined}
+      contentContainerClassName={largo ? 'w-full' : undefined}
       contentContainerStyle={{ paddingBottom: 32 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
-      <Text className="text-texto text-lg font-bold mb-3">Evolução da lesão</Text>
+      <CabecalhoTela icone="pulse" titulo="Evolução da lesão" subtitulo="Fotos, medidas e escala de cicatriz ao longo do tempo" />
 
       <Text className="text-texto font-semibold mb-2">Fotos</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
         <Link href={`/paciente/${id}/lesao/${lesaoId}/foto/nova`} asChild>
-          <Pressable className="w-24 h-24 mr-3 rounded-xl border border-dashed border-borda items-center justify-center bg-superficie">
-            <Text className="text-primaria text-xs font-semibold text-center">+ Nova{'\n'}foto</Text>
+          <Pressable
+            accessibilityLabel="Tirar foto da lesão"
+            className="w-24 h-24 mr-3 rounded-xl border border-dashed border-primaria items-center justify-center bg-primaria-suave gap-1">
+            <Ionicons name="camera" size={24} color={palette.primaria} />
+            <Text className="text-primaria text-xs font-semibold">Foto</Text>
           </Pressable>
         </Link>
         {analises.map((a) => (

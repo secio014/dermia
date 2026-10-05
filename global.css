@@ -73,3 +73,102 @@
     --risco: 255 107 107;
   }
 }
+
+/*
+ * Microinterações (web): brilho suave ao passar o mouse em qualquer elemento
+ * clicável. Só sombra + transição — nada que mude layout.
+ */
+[role='button'],
+[role='link'],
+a,
+button {
+  transition:
+    box-shadow 220ms ease,
+    background-color 220ms ease,
+    opacity 220ms ease;
+}
+[role='button']:hover,
+[role='link']:hover,
+a:hover,
+button:hover {
+  box-shadow:
+    0 0 0 2px rgb(var(--primaria) / 0.12),
+    0 4px 18px rgb(var(--primaria) / 0.18);
+}
+[role='button']:focus-visible,
+[role='link']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(var(--primaria) / 0.35);
+}
+
+/* Quem pediu "reduzir movimento" no sistema não recebe animação decorativa. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/*
+ * Profundidade (web): cartões ganham sombra difusa em vez de só borda — o app
+ * fica menos "chapado". Clicáveis sobem 1px ao passar o mouse.
+ * Só box-shadow/transform: compostos pela GPU, sem custo de layout.
+ */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.bg-superficie.rounded-xl.border,
+.bg-superficie.rounded-2xl.border {
+  box-shadow:
+    0 1px 2px rgb(var(--texto) / 0.04),
+    0 8px 24px -12px rgb(var(--primaria) / 0.18);
+}
+[role='button'] {
+  transition:
+    box-shadow 220ms ease,
+    background-color 220ms ease,
+    opacity 220ms ease,
+    transform 180ms ease;
+}
+[role='button']:hover {
+  transform: translateY(-1px);
+}
+[role='button']:active {
+  transform: translateY(0) scale(0.99);
+}
+input,
+textarea {
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+input:focus,
+textarea:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgb(var(--primaria) / 0.18);
+  border-radius: 10px;
+}
+
+/*
+ * Fundo vivo (web): luz difusa da marca em todo fundo do app. Com
+ * background-attachment: fixed, todos os elementos .bg-fundo pintam a MESMA
+ * região do gradiente — fica contínuo mesmo com fundos aninhados.
+ */
+.bg-fundo {
+  background-image:
+    radial-gradient(60vw 50vh at 85% 0%, rgb(var(--primaria) / 0.07), transparent 70%),
+    radial-gradient(50vw 45vh at 0% 100%, rgb(255 138 101 / 0.06), transparent 70%);
+  background-attachment: fixed;
+}
+
+/* Botões principais: gradiente da marca + brilho ao passar o mouse. */
+[role='button'].bg-primaria {
+  background-image: linear-gradient(135deg, rgb(var(--primaria)), rgb(255 122 89));
+  box-shadow: 0 6px 18px -10px rgb(var(--primaria) / 0.8);
+}
+[role='button'].bg-primaria:hover {
+  box-shadow: 0 12px 30px -10px rgb(var(--primaria) / 0.85);
+}

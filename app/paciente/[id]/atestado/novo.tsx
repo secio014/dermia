@@ -3,6 +3,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SeletorData from '@/components/ui/SeletorData';
+import CabecalhoTela from '@/components/ui/CabecalhoTela';
 import { enviarDocumentoPorEmail } from '@/.lib/documentos';
 import { montarHtmlAtestado, gerarECompartilharPDF } from '@/.lib/pdf';
 import { obterPerfilProfissional } from '@/.lib/perfil';
@@ -81,9 +82,10 @@ export default function NovoAtestado() {
   return (
     <ScrollView
       className="flex-1 bg-fundo px-4 pt-4"
-      contentContainerClassName="w-full max-w-3xl self-center"
+      contentContainerClassName="w-full"
       contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ headerTitle: 'DermIA' }} />
+      <CabecalhoTela icone="document" titulo="Novo atestado" subtitulo="Gera o PDF e envia por e-mail ao paciente" />
 
       <Text className="text-secundario text-xs font-semibold mb-1">TIPO</Text>
       <View className="flex-row gap-2 mb-4">
