@@ -32,13 +32,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { json, preflight } from '../_shared/cors.ts';
 import type { ContextoLesao } from './conhecimento/index.ts';
-import { MODELOS_PADRAO } from './modelo.ts';
+import { MODELOS_PADRAO, ehErroLimiteIa } from './modelo.ts';
 import { analisarFoto } from './pipeline.ts';
 import { checarQualidadeFoto } from './qualidade.ts';
 
 // Prefixo em analises_ia.erro_mensagem quando a foto não dá pra analisar (preta,
 // borrada, sem lesão, etc.). O app trata isso diferente de uma falha do sistema.
 const PREFIXO_IMAGEM_INADEQUADA = 'IMAGEM_INADEQUADA: ';
+const PREFIXO_LIMITE_IA = 'LIMITE_IA: ';
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -160,6 +161,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, resultado }, 200);
   } catch (erro) {
+    if (ehErroLimiteIa(erro)) return marcarErro(PREFIXO_LIMITE_IA + erro.message);
     return marcarErro(erro instanceof Error ? erro.message : 'Erro desconhecido ao chamar o Workers AI.');
   }
 });

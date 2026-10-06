@@ -24,6 +24,7 @@ import Vidro from '@/components/efeitos/Vidro';
 import Protegido from '@/components/Protegido';
 import TextoFormatado from '@/components/ui/TextoFormatado';
 import { supabase } from '@/.lib/supabase';
+import { TEXTO_LIMITE_IA, TITULO_LIMITE_IA, ehLimiteIaGratis } from '@/.lib/limiteIa';
 import { larguraColuna, useColunas } from '@/.lib/responsivo';
 import { useTema } from '@/.lib/tema';
 
@@ -42,6 +43,7 @@ type Mensagem = {
   pacientes?: PacienteCitado[];
   erro?: boolean;
   recusa?: boolean;
+  limite?: boolean;
 };
 type Anexo = { uri: string; base64: string };
 
@@ -188,7 +190,11 @@ function Assistente() {
     setEnviando(false);
     if (error || !data?.resposta) {
       const msg = error ? await mensagemDeErro(error) : 'A IA não retornou resposta.';
-      setMensagens((atual) => [...atual, { role: 'assistant', content: msg, erro: true }]);
+      const limite = ehLimiteIaGratis(msg);
+      setMensagens((atual) => [
+        ...atual,
+        { role: 'assistant', content: limite ? TEXTO_LIMITE_IA : msg, erro: true, limite },
+      ]);
       return;
     }
     setMensagens((atual) => [
@@ -384,16 +390,29 @@ function Assistente() {
                   className="w-7 h-7 rounded-full items-center justify-center mt-0.5"
                   style={{ backgroundColor: cores.primariaSuave }}>
                   <Ionicons
-                    name={m.erro ? 'warning-outline' : m.recusa ? 'flame-outline' : 'sparkles'}
+                    name={
+                      m.limite
+                        ? 'hourglass-outline'
+                        : m.erro
+                          ? 'warning-outline'
+                          : m.recusa
+                            ? 'flame-outline'
+                            : 'sparkles'
+                    }
                     size={14}
                     color={cores.primaria}
                   />
                 </View>
                 <View
                   className={`flex-1 bg-superficie border rounded-2xl rounded-tl-sm px-3.5 py-2.5 ${
-                    m.erro ? 'border-risco' : m.recusa ? 'border-atencao' : 'border-borda'
+                    m.limite ? 'border-atencao' : m.erro ? 'border-risco' : m.recusa ? 'border-atencao' : 'border-borda'
                   }`}>
-                  {m.erro ? (
+                  {m.limite ? (
+                    <>
+                      <Text className="text-atencao font-semibold mb-1">{TITULO_LIMITE_IA}</Text>
+                      <Text className="text-secundario text-sm">{m.content}</Text>
+                    </>
+                  ) : m.erro ? (
                     <Text className="text-risco text-sm">{m.content}</Text>
                   ) : (
                     <TextoFormatado texto={m.content} />

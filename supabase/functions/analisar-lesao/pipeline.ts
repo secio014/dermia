@@ -30,7 +30,7 @@ import {
   montarPromptObservacao,
 } from './conhecimento/index.ts';
 import type { Grau } from './conhecimento/vocabulario.ts';
-import { type Credenciais, chamarModeloVisao } from './modelo.ts';
+import { type Credenciais, chamarModeloVisao, ehErroLimiteIa } from './modelo.ts';
 
 export type AnaliseFoto =
   | { tipo: 'nova_foto'; motivo: string; modelo: string }
@@ -177,6 +177,15 @@ export async function analisarFoto(
     chamarModeloVisao(cred, modelos, montarPromptConferencia(), bytes, mime, 0.1),
     ...TEMPERATURAS_LEITURA.map((t) => chamarModeloVisao(cred, modelos, promptObs, bytes, mime, t)),
   ]);
+
+  // Cota grátis do Workers AI esgotada: as outras leituras também falharam
+  // pelo mesmo motivo, então avisa isso em vez de "nenhuma leitura válida".
+  const limite = [respConf, ...respLeituras].find(
+    (r) => r.status === 'rejected' && ehErroLimiteIa(r.reason)
+  );
+  if (limite && !respLeituras.some((r) => r.status === 'fulfilled')) {
+    throw (limite as PromiseRejectedResult).reason;
+  }
 
   let modelo = modelos[0];
   const falhas: string[] = [];

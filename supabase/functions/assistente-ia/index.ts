@@ -21,7 +21,13 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 import { json, preflight } from '../_shared/cors.ts';
 import type { Resultado } from '../analisar-lesao/conhecimento/index.ts';
-import { MODELOS_PADRAO, chamarModeloVisao } from '../analisar-lesao/modelo.ts';
+import {
+  LimiteIaError,
+  MODELOS_PADRAO,
+  chamarModeloVisao,
+  ehErroLimiteIa,
+  ehLimiteIa,
+} from '../analisar-lesao/modelo.ts';
 import { analisarFoto } from '../analisar-lesao/pipeline.ts';
 import { checarQualidadeFoto } from '../analisar-lesao/qualidade.ts';
 import { CONHECIMENTO } from './conhecimento.ts';
@@ -393,7 +399,11 @@ async function rodarModelo(
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ messages, max_tokens: maxTokens, temperature: temperatura }),
   });
-  if (!r.ok) throw new Error(`Workers AI respondeu ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  if (!r.ok) {
+    const texto = await r.text();
+    if (ehLimiteIa(r.status, texto)) throw new LimiteIaError();
+    throw new Error(`Workers AI respondeu ${r.status}: ${texto.slice(0, 300)}`);
+  }
   const corpo = await r.json();
   const bruto = corpo.result?.response;
   if (bruto && typeof bruto === 'object') return JSON.stringify(bruto);
@@ -438,7 +448,8 @@ async function dentroDoEscopo(accountId: string, token: string, mensagens: Msg[]
       0
     );
     return extrairJson(saida)?.fora !== true;
-  } catch {
+  } catch (e) {
+    if (ehErroLimiteIa(e)) throw e;
     return true;
   }
 }
@@ -572,6 +583,7 @@ Deno.serve(async (req) => {
     const { textoFinal, citados } = citarPacientes(texto, geral.pacientes);
     return json({ resposta: textoFinal, pacientes: citados, modelo }, 200);
   } catch (e) {
+    if (ehErroLimiteIa(e)) return json({ error: e.message, limite_ia: true }, 429);
     return json({ error: e instanceof Error ? e.message : 'Falha ao chamar a IA.' }, 502);
   }
 });

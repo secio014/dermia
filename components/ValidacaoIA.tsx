@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { palette } from '@/constants/Colors';
 import { GRAUS_CLINICOS } from '@/.lib/scq';
+import { TEXTO_LIMITE_IA, TITULO_LIMITE_IA, ehLimiteIaGratis } from '@/.lib/limiteIa';
 
 export type ResultadoIA = {
   grau_sugerido?: string;
@@ -86,6 +87,15 @@ export default function ValidacaoIA({
           <Text className="text-secundario text-xs mt-2">
             Refaça a foto com boa iluminação, foco e a lesão bem enquadrada, ou avalie manualmente.
           </Text>
+        </View>
+      );
+    }
+    if (ehLimiteIaGratis(erroMensagem)) {
+      return (
+        <View className="bg-superficie border border-atencao rounded-xl p-4">
+          <Text className="text-atencao font-semibold mb-1">{TITULO_LIMITE_IA}</Text>
+          <Text className="text-secundario text-sm">{TEXTO_LIMITE_IA}</Text>
+          <Text className="text-secundario text-xs mt-2">Enquanto isso, avalie manualmente.</Text>
         </View>
       );
     }

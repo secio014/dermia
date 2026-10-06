@@ -12,6 +12,30 @@ export const MODELOS_PADRAO = [
 
 export type Credenciais = { accountId: string; token: string };
 
+// Plano grátis do Workers AI: 10.000 neurons/dia por conta, renovados à
+// 00:00 UTC. Ao estourar, a API responde 429 com code 4006 ("daily free
+// allocation"). A cota é da conta inteira, então não adianta tentar outro
+// modelo/formato — a falha sobe direto com uma mensagem legível.
+export const MENSAGEM_LIMITE_IA =
+  'Limite diário gratuito da IA atingido: a conta usou os 10.000 "neurons" do plano grátis do ' +
+  'Cloudflare Workers AI. A cota renova todo dia às 21h (horário de Brasília, 00:00 UTC). ' +
+  'Para continuar antes disso, é preciso assinar o plano Workers Paid da Cloudflare.';
+
+export class LimiteIaError extends Error {
+  constructor() {
+    super(MENSAGEM_LIMITE_IA);
+    this.name = 'LimiteIaError';
+  }
+}
+
+export function ehLimiteIa(status: number, texto: string): boolean {
+  return status === 429 && (/"code"\s*:\s*4006/.test(texto) || /daily free allocation|neurons/i.test(texto));
+}
+
+export function ehErroLimiteIa(e: unknown): e is LimiteIaError {
+  return e instanceof LimiteIaError;
+}
+
 // btoa(String.fromCharCode(...uint8array)) estoura a call stack numa foto de
 // ~200-400 KB (spread de centenas de milhares de args). Encoda em blocos.
 export function bytesParaBase64(bytes: Uint8Array): string {
@@ -33,6 +57,7 @@ async function rodar(cred: Credenciais, modelo: string, corpo: unknown): Promise
     }
   );
   const texto = await resposta.text();
+  if (ehLimiteIa(resposta.status, texto)) throw new LimiteIaError();
   if (!resposta.ok) throw new Error(`${modelo} respondeu ${resposta.status}: ${texto.slice(0, 300)}`);
   const json = JSON.parse(texto);
   if (json.success === false) {
@@ -81,6 +106,7 @@ export async function chamarModeloVisao(
       try {
         return { bruto: await rodar(cred, modelo, corpo), modelo };
       } catch (e) {
+        if (ehErroLimiteIa(e)) throw e;
         falhas.push(e instanceof Error ? e.message : String(e));
       }
     }
